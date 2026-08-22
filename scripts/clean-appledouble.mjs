@@ -9,11 +9,12 @@
  *    and both then fail on a NUL byte. This strips the xattrs (so they stop
  *    being regenerated) and deletes any already on disk.
  *
- * 2. Turbopack's persistent cache (with --reset-turbopack-cache).
- *    `next dev` and `next build` share `.next/cache`. On exFAT the build
- *    can't reopen the cache database the dev server left behind and dies with
- *    "Failed to open database: invalid digit found in string". Dropping the
- *    cache before a build costs a few seconds and makes it reliable.
+ * 2. Turbopack's persistent caches (with --reset-turbopack-cache).
+ *    `next dev` and `next build` write cache databases under `.next`. On exFAT
+ *    neither can reopen a database the other left behind, and whichever runs
+ *    second dies with "Failed to open database: invalid digit found in
+ *    string". Dropping those directories costs a few seconds of cold start and
+ *    makes both commands reliable. Build *output* is untouched.
  *
  * Runs before every quality gate.
  */
@@ -57,6 +58,8 @@ await walk(".");
 if (removed > 0) console.log(`[clean] removed ${removed} AppleDouble sidecar file(s)`);
 
 if (process.argv.includes("--reset-turbopack-cache")) {
-  await rm(".next/cache", { recursive: true, force: true });
-  console.log("[clean] dropped .next/cache for a clean Turbopack build");
+  // Caches only — `.next/server`, `.next/static` and the manifests survive.
+  const caches = [".next/cache", ".next/turbopack", ".next/dev"];
+  await Promise.all(caches.map((dir) => rm(dir, { recursive: true, force: true })));
+  console.log(`[clean] dropped ${caches.join(", ")}`);
 }
