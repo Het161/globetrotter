@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { usePathname } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { TooltipProvider } from "@/components/ui/menu";
 import { Backdrop } from "@/components/ui/backdrop";
 import { CurrencyProvider } from "@/hooks/use-currency";
@@ -16,9 +15,19 @@ import { TopBar } from "./top-bar";
  * The frame every signed-in screen sits inside: rail, top bar, mobile tabs,
  * and the working-screen backdrop.
  *
- * Route changes fade and rise 6 px. That is deliberately the cheapest possible
- * transition — the builder and budget screens are dense, and anything longer
- * starts to feel like waiting.
+ * Route changes fade and rise, via a **CSS** animation keyed on the pathname.
+ *
+ * This used to be `AnimatePresence mode="wait"` wrapping a `motion.div`. That
+ * mode withholds the incoming page until the outgoing one finishes animating
+ * out — so anything that stops the exit from completing leaves the shell up
+ * with a completely blank content area, recoverable only by a full reload. It
+ * happened in real use across every route.
+ *
+ * A CSS animation cannot fail that way. It is declarative, it never gates
+ * mounting, and `animation-fill-mode: both` guarantees it settles at
+ * opacity 1 even if the main thread is busy. The reduced-motion block in
+ * globals.css collapses it to nothing. The exit animation is gone, which costs
+ * a 4 px cross-fade nobody could see and removes an entire class of failure.
  */
 export function AppShell({
   user,
@@ -28,7 +37,6 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const reduceMotion = useReducedMotion();
 
   return (
     <CurrencyProvider currency={user.currency}>
@@ -53,17 +61,11 @@ export function AppShell({
               id="main"
               className="mx-auto min-h-[calc(100dvh-3.5rem)] w-full max-w-[1440px] px-4 pb-24 pt-6 sm:px-6 md:pb-10 lg:px-8"
             >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={pathname}
-                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
-                  transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {children}
-                </motion.div>
-              </AnimatePresence>
+              {/* Keyed on the pathname so the entrance replays per route.
+                  Nothing gates the children being mounted. */}
+              <div key={pathname} className="gt-page-in">
+                {children}
+              </div>
             </main>
           </div>
 

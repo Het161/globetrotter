@@ -777,6 +777,14 @@
     animation: var(--animate-shimmer);
   }
 
+  /* Page transition for every signed-in route.
+     `both` matters: whatever happens to the main thread, this settles at
+     opacity 1. It replaces an AnimatePresence mode="wait" that could withhold
+     the incoming page entirely and leave the content area blank. */
+  .gt-page-in {
+    animation: rise-in var(--dur-enter) var(--ease-deck) both;
+  }
+
   /* --- Intro curtain ----------------------------------------------------
      The landing page's opening. The whole timeline lives in these custom
      properties so the choreography can be retuned in one place.
