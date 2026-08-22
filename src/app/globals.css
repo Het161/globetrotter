@@ -171,14 +171,7 @@
     opacity: 1;
   }
 
-  /* Autofill in Chrome paints its own background — override it. */
-  input:-webkit-autofill,
-  input:-webkit-autofill:hover,
-  input:-webkit-autofill:focus {
-    -webkit-text-fill-color: var(--color-cloud);
-    -webkit-box-shadow: 0 0 0 1000px var(--color-deck) inset;
-    caret-color: var(--color-cloud);
-  }
+  /* Autofill is handled unlayered at the end of this file — see the note there. */
 }
 
 /* ==========================================================================
@@ -815,4 +808,54 @@
 .recharts-wrapper svg:focus,
 .recharts-surface:focus {
   outline: none;
+}
+
+/* ==========================================================================
+   Chrome autofill — deliberately unlayered.
+
+   Chrome paints its own pale background on any field it can autofill, which is
+   unreadable on a dark UI. `background-color` can't override it; the only
+   thing that works is a large inset box-shadow painted over the top.
+
+   That has to beat `.field`, which sets `box-shadow` in the components layer —
+   and a later layer always wins over an earlier one, so putting this in
+   `@layer base` (where it started) silently did nothing. Unlayered rules beat
+   every layer regardless of order, which is why this sits outside them all.
+
+   `.field`'s own inner shadow is repeated here so an autofilled input keeps the
+   same depth as every other input, and the field's transitions are restated so
+   the focus border still animates.
+   ========================================================================== */
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--color-cloud);
+  caret-color: var(--color-cloud);
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1000px var(--color-deck) inset;
+  transition:
+    border-color var(--dur-hover) var(--ease-deck),
+    box-shadow var(--dur-hover) var(--ease-deck),
+    /* Chrome fades its own background in after paint; outrunning that is
+       simpler than fighting it. */ background-color 6000000s 0s;
+}
+
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill:focus {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1000px var(--color-deck) inset,
+    var(--glow-lagoon);
+}
+
+input:-webkit-autofill[aria-invalid="true"]:focus {
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1000px var(--color-deck) inset,
+    var(--glow-ember);
 }
