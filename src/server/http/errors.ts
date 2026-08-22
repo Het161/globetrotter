@@ -75,3 +75,22 @@ export class RateLimitError extends AppError {
 export function isAppError(e: unknown): e is AppError {
   return e instanceof AppError;
 }
+
+/**
+ * Turn a "not found" into `null` so a page can do:
+ *
+ *   const trip = await orNotFound(getTrip(id, user));
+ *   if (!trip) notFound();
+ *
+ * Any other error still propagates to the error boundary. This keeps the
+ * fetch inside the try and the JSX outside it — the React Compiler can't
+ * memoise JSX constructed inside a try/catch, and lints against it.
+ */
+export async function orNotFound<T>(promise: Promise<T>): Promise<T | null> {
+  try {
+    return await promise;
+  } catch (error) {
+    if (isAppError(error) && error.code === "NOT_FOUND") return null;
+    throw error;
+  }
+}

@@ -1,16 +1,23 @@
 /**
- * macOS writes an AppleDouble sidecar (`._name`) next to any file that carries
- * extended attributes when the volume can't store them natively — which is the
- * case on the exFAT drive this repo lives on.
+ * Housekeeping that this repo needs because it lives on an exFAT volume.
  *
- * Those sidecars are binary, but they keep the original extension, so
- * `._page.tsx` looks like a route to Next.js and `._budget.test.ts` looks like
- * a test to vitest. Both then fail on a NUL byte.
+ * 1. AppleDouble sidecars.
+ *    macOS writes a `._name` file next to anything carrying extended
+ *    attributes when the volume can't store them natively. Those sidecars are
+ *    binary but keep the original extension, so `._page.tsx` looks like a
+ *    route to Next.js and `._budget.test.ts` looks like a test to vitest —
+ *    and both then fail on a NUL byte. This strips the xattrs (so they stop
+ *    being regenerated) and deletes any already on disk.
  *
- * This strips the extended attributes (so they stop being regenerated) and
- * deletes any sidecars already on disk. It runs before every quality gate.
+ * 2. Turbopack's persistent cache (with --reset-turbopack-cache).
+ *    `next dev` and `next build` share `.next/cache`. On exFAT the build
+ *    can't reopen the cache database the dev server left behind and dies with
+ *    "Failed to open database: invalid digit found in string". Dropping the
+ *    cache before a build costs a few seconds and makes it reliable.
+ *
+ * Runs before every quality gate.
  */
-import { readdir, rm, stat } from "node:fs/promises";
+import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -48,4 +55,8 @@ await walk(".");
 await walk(".");
 
 if (removed > 0) console.log(`[clean] removed ${removed} AppleDouble sidecar file(s)`);
-await stat(".").catch(() => {});
+
+if (process.argv.includes("--reset-turbopack-cache")) {
+  await rm(".next/cache", { recursive: true, force: true });
+  console.log("[clean] dropped .next/cache for a clean Turbopack build");
+}

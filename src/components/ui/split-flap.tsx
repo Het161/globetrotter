@@ -16,7 +16,8 @@ import { cn } from "@/lib/utils";
  * incoming one rotates in, staggered 60 ms per column so the board resolves
  * left to right the way a real one does.
  *
- * Under prefers-reduced-motion the flips are replaced by a plain count-up.
+ * Under prefers-reduced-motion the rotation is dropped and each character
+ * cross-fades in place instead.
  */
 
 const SIZES = {
@@ -138,40 +139,4 @@ function Flap({
       </AnimatePresence>
     </span>
   );
-}
-
-/**
- * Count a number up to its target, for the reduced-motion path and for tiles
- * that want the number to settle rather than flip.
- */
-export function useCountUp(target: number, durationMs = 600) {
-  const [value, setValue] = React.useState(target);
-  const reduceMotion = useReducedMotion();
-
-  React.useEffect(() => {
-    if (reduceMotion) {
-      setValue(target);
-      return;
-    }
-
-    const start = performance.now();
-    const from = value;
-    let frame = 0;
-
-    const tick = (now: number) => {
-      const progress = Math.min(1, (now - start) / durationMs);
-      // easeOutExpo — fast then settling, matching --ease-deck's feel.
-      const eased = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
-      setValue(from + (target - from) * eased);
-      if (progress < 1) frame = requestAnimationFrame(tick);
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-    // `value` is intentionally excluded: including it would restart the
-    // animation on every frame.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target, durationMs, reduceMotion]);
-
-  return value;
 }

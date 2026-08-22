@@ -6,6 +6,7 @@ import type { ActivityCategory } from "@prisma/client";
 import type { ActivityDTO, CityDTO } from "@/server/dto";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import { useCurrency } from "@/hooks/use-currency";
 import { AddToTripSheet } from "./add-to-trip-sheet";
 import { DeckButton } from "@/components/ui/deck-button";
@@ -48,55 +49,25 @@ export function ActivityBrowser({
   const [maxDuration, setMaxDuration] = React.useState(facets.maxDuration);
   const [sort, setSort] = React.useState("popular");
 
-  const [activities, setActivities] = React.useState(initial);
-  const [loading, setLoading] = React.useState(false);
   const [preview, setPreview] = React.useState<ActivityDTO | null>(null);
   const [addOpen, setAddOpen] = React.useState(false);
 
   const debounced = useDebounce(query, 150);
   const debouncedCost = useDebounce(maxCost, 200);
   const debouncedDuration = useDebounce(maxDuration, 200);
-  const isFirstRender = React.useRef(true);
 
-  React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
-    const controller = new AbortController();
-    setLoading(true);
-
-    api
-      .list<ActivityDTO>(
-        `/cities/${city.slug}/activities${api.query({
-          q: debounced,
-          category: category ?? "",
-          // Only send the caps when they're actually restricting something.
-          maxCost: debouncedCost < facets.maxCost ? debouncedCost : "",
-          maxDuration: debouncedDuration < facets.maxDuration ? debouncedDuration : "",
-          sort,
-          pageSize: 30,
-        })}`,
-        { signal: controller.signal },
-      )
-      .then((result) => setActivities(result.items))
-      .catch(() => {
-        /* aborted */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [
-    city.slug,
-    debounced,
-    category,
-    debouncedCost,
-    debouncedDuration,
-    sort,
-    facets.maxCost,
-    facets.maxDuration,
-  ]);
+  const { items: activities, loading } = useRemoteList<ActivityDTO>(
+    `/cities/${city.slug}/activities${api.query({
+      q: debounced,
+      category: category ?? "",
+      // Only send the caps when they're actually restricting something.
+      maxCost: debouncedCost < facets.maxCost ? debouncedCost : "",
+      maxDuration: debouncedDuration < facets.maxDuration ? debouncedDuration : "",
+      sort,
+      pageSize: 30,
+    })}`,
+    { items: initial, total: initial.length },
+  );
 
   return (
     <>

@@ -5,6 +5,7 @@ import { Search, SlidersHorizontal, X } from "lucide-react";
 import type { CityDTO } from "@/server/dto";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import { CityCard } from "./city-card";
 import { AddToTripSheet } from "./add-to-trip-sheet";
 import { DeckButton } from "@/components/ui/deck-button";
@@ -38,60 +39,39 @@ export function ExploreBrowser({
   const [sort, setSort] = React.useState("popular");
   const [page, setPage] = React.useState(1);
 
-  const [cities, setCities] = React.useState(initial.items);
-  const [total, setTotal] = React.useState(initial.total);
-  const [loading, setLoading] = React.useState(false);
   const [addTarget, setAddTarget] = React.useState<CityDTO | null>(null);
 
   const debounced = useDebounce(query, 150);
-  const isFirstRender = React.useRef(true);
 
-  React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+  const { items: cities, total, loading } = useRemoteList<CityDTO>(
+    `/cities${api.query({
+      q: debounced,
+      region: region ?? "",
+      country,
+      cost,
+      sort,
+      page,
+      pageSize: PAGE_SIZE,
+    })}`,
+    initial,
+  );
 
-    const controller = new AbortController();
-    setLoading(true);
-
-    api
-      .list<CityDTO>(
-        `/cities${api.query({
-          q: debounced,
-          region: region ?? "",
-          country,
-          cost,
-          sort,
-          page,
-          pageSize: PAGE_SIZE,
-        })}`,
-        { signal: controller.signal },
-      )
-      .then((result) => {
-        setCities(result.items);
-        setTotal(result.total);
-      })
-      .catch(() => {
-        /* aborted */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [debounced, region, country, cost, sort, page]);
-
-  React.useEffect(() => {
+  /** Every filter control resets to page one — done here, not in an effect. */
+  function applyFilter(change: () => void) {
+    change();
     setPage(1);
-  }, [debounced, region, country, cost, sort]);
+  }
 
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const filtered = Boolean(debounced || region || country || cost);
 
   function clearAll() {
-    setQuery("");
-    setRegion(null);
-    setCountry("");
-    setCost("");
+    applyFilter(() => {
+      setQuery("");
+      setRegion(null);
+      setCountry("");
+      setCost("");
+    });
   }
 
   return (
@@ -106,7 +86,7 @@ export function ExploreBrowser({
             />
             <Input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => applyFilter(() => setQuery(event.target.value))}
               placeholder="Search by city or country…"
               aria-label="Search destinations"
               className="h-11 pl-10 pr-10 text-base"
@@ -114,7 +94,7 @@ export function ExploreBrowser({
             {query ? (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => applyFilter(() => setQuery(""))}
                 aria-label="Clear search"
                 className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-fog hover:text-cloud"
               >
@@ -126,7 +106,7 @@ export function ExploreBrowser({
           <div className="flex gap-3">
             <NativeSelect
               value={country}
-              onChange={(event) => setCountry(event.target.value)}
+              onChange={(event) => applyFilter(() => setCountry(event.target.value))}
               aria-label="Filter by country"
               className="h-11 w-40"
             >
@@ -140,7 +120,7 @@ export function ExploreBrowser({
 
             <NativeSelect
               value={sort}
-              onChange={(event) => setSort(event.target.value)}
+              onChange={(event) => applyFilter(() => setSort(event.target.value))}
               aria-label="Sort destinations"
               className="h-11 w-40"
             >
@@ -152,14 +132,14 @@ export function ExploreBrowser({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <FilterChip active={region === null} onClick={() => setRegion(null)}>
+          <FilterChip active={region === null} onClick={() => applyFilter(() => setRegion(null))}>
             All regions
           </FilterChip>
           {facets.regions.map((option) => (
             <FilterChip
               key={option.value}
               active={region === option.value}
-              onClick={() => setRegion(region === option.value ? null : option.value)}
+              onClick={() => applyFilter(() => setRegion(region === option.value ? null : option.value))}
             >
               {option.value}
               <span className="text-fog-dim">{option.count}</span>
@@ -177,7 +157,7 @@ export function ExploreBrowser({
             <FilterChip
               key={band.value}
               active={cost === band.value}
-              onClick={() => setCost(cost === band.value ? "" : band.value)}
+              onClick={() => applyFilter(() => setCost(cost === band.value ? "" : band.value))}
               aria-label={`Cost band ${band.label}`}
             >
               <span className="font-mono">{band.label}</span>

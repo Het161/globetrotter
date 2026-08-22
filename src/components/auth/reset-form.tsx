@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { resetSchema, type ResetInput } from "@/lib/validators/auth";
@@ -18,12 +18,16 @@ export function ResetForm({ token }: { token: string }) {
     register,
     handleSubmit,
     setError,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ResetInput>({
     resolver: zodResolver(resetSchema),
     defaultValues: { token, password: "", confirm: "" },
   });
+
+  // useWatch rather than watch(): it subscribes without returning a fresh
+  // function each render, so the React Compiler can still memoize this form.
+  const password = useWatch({ control, name: "password" });
 
   async function onSubmit(values: ResetInput) {
     try {
@@ -63,7 +67,7 @@ export function ResetForm({ token }: { token: string }) {
         />
       </Field>
 
-      <PasswordMeter password={watch("password")} />
+      <PasswordMeter password={password} />
 
       <Field label="Confirm password" htmlFor="confirm" error={errors.confirm?.message}>
         <PasswordInput

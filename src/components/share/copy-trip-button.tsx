@@ -27,11 +27,14 @@ export function CopyTripButton({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [busy, setBusy] = React.useState(false);
+  // Arriving back from the login wall with ?copy=1 means the copy is already
+  // under way, so the button starts in its busy state rather than an effect
+  // flipping it there on the first commit.
+  const autoCopy = isSignedIn && searchParams.get("copy") === "1";
+  const [busy, setBusy] = React.useState(autoCopy);
   const autoRan = React.useRef(false);
 
   const copy = React.useCallback(async () => {
-    setBusy(true);
     try {
       const trip = await api.post<TripDTO>(`/share/${slug}/copy`, {}, { toastOnError: false });
       toast.success("Copied to your trips");
@@ -44,12 +47,10 @@ export function CopyTripButton({
 
   // Came back from signing in with copy=1 — finish what they started.
   React.useEffect(() => {
-    if (!isSignedIn || autoRan.current) return;
-    if (searchParams.get("copy") !== "1") return;
-
+    if (!autoCopy || autoRan.current) return;
     autoRan.current = true;
     void copy();
-  }, [isSignedIn, searchParams, copy]);
+  }, [autoCopy, copy]);
 
   function onClick() {
     if (!isSignedIn) {
@@ -57,6 +58,7 @@ export function CopyTripButton({
       router.push(`/login?next=${next}`);
       return;
     }
+    setBusy(true);
     void copy();
   }
 

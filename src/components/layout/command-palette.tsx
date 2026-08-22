@@ -7,6 +7,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Compass, LayoutDashboard, Map, MapPin, Plus, Search, Settings } from "lucide-react";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import type { CityDTO, TripDTO } from "@/server/dto";
 import { formatDateRange } from "@/lib/dates";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,12 @@ import { cn } from "@/lib/utils";
  * ⌘K palette. Searches the city catalogue and the user's own trips against the
  * real API — cmdk's built-in filtering is turned off so the trigram index does
  * the work, not the browser.
+ *
+ * The two searches are separate `useRemoteList` calls, which means they fire in
+ * parallel and each aborts its own in-flight request as the query changes.
  */
+
+const MIN_QUERY = 2;
 
 const QUICK_LINKS = [
   { href: "/dashboard", label: "Go to Dashboard", icon: LayoutDashboard },
@@ -35,59 +41,31 @@ export function CommandPalette({
   const router = useRouter();
   const [query, setQuery] = React.useState("");
   const debounced = useDebounce(query, 150);
-  const [cities, setCities] = React.useState<CityDTO[]>([]);
-  const [trips, setTrips] = React.useState<TripDTO[]>([]);
-  const [loading, setLoading] = React.useState(false);
 
-  React.useEffect(() => {
-    if (!open) {
-      setQuery("");
-      setCities([]);
-      setTrips([]);
-      return;
-    }
-  }, [open]);
+  const term = open && debounced.trim().length >= MIN_QUERY ? debounced.trim() : null;
 
-  React.useEffect(() => {
-    if (!open || debounced.trim().length < 2) {
-      setCities([]);
-      setTrips([]);
-      return;
-    }
+  const cities = useRemoteList<CityDTO>(
+    term ? `/cities${api.query({ q: term, pageSize: 5 })}` : null,
+  );
+  const trips = useRemoteList<TripDTO>(
+    term ? `/trips${api.query({ q: term, pageSize: 4 })}` : null,
+  );
 
-    // Cancel the in-flight search when the user keeps typing.
-    const controller = new AbortController();
-    setLoading(true);
+  const loading = cities.loading || trips.loading;
 
-    Promise.all([
-      api.list<CityDTO>(`/cities${api.query({ q: debounced, pageSize: 5 })}`, {
-        signal: controller.signal,
-        toastOnError: false,
-      }),
-      api.list<TripDTO>(`/trips${api.query({ q: debounced, pageSize: 4 })}`, {
-        signal: controller.signal,
-        toastOnError: false,
-      }),
-    ])
-      .then(([cityResult, tripResult]) => {
-        setCities(cityResult.items);
-        setTrips(tripResult.items);
-      })
-      .catch(() => {
-        /* aborted or offline — the list simply stays as it was */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [debounced, open]);
+  /** Clear the query on close so the palette always opens fresh. */
+  function handleOpenChange(next: boolean) {
+    if (!next) setQuery("");
+    onOpenChange(next);
+  }
 
   function go(href: string) {
-    onOpenChange(false);
+    handleOpenChange(false);
     router.push(href);
   }
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
+    <DialogPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay className="anim-overlay fixed inset-0 z-50 bg-ink-deep/80 backdrop-blur-sm" />
         <DialogPrimitive.Content
@@ -111,15 +89,15 @@ export function CommandPalette({
             </div>
 
             <Command.List className="max-h-[52vh] overflow-y-auto p-2">
-              {query.trim().length >= 2 && !loading && cities.length === 0 && trips.length === 0 ? (
+              {term && !loading && cities.items.length === 0 && trips.items.length === 0 ? (
                 <Command.Empty className="px-3 py-8 text-center text-sm text-fog">
                   Nothing matches “{query}”.
                 </Command.Empty>
               ) : null}
 
-              {trips.length > 0 ? (
+              {trips.items.length > 0 ? (
                 <Group heading="Your trips">
-                  {trips.map((trip) => (
+                  {trips.items.map((trip) => (
                     <Item key={trip.id} onSelect={() => go(`/trips/${trip.id}`)}>
                       <Map className="size-4 text-lagoon" aria-hidden />
                       <span className="trip-name flex-1 truncate">{trip.name}</span>
@@ -131,9 +109,9 @@ export function CommandPalette({
                 </Group>
               ) : null}
 
-              {cities.length > 0 ? (
+              {cities.items.length > 0 ? (
                 <Group heading="Destinations">
-                  {cities.map((city) => (
+                  {cities.items.map((city) => (
                     <Item key={city.id} onSelect={() => go(`/explore/${city.slug}`)}>
                       <MapPin className="size-4 text-solar" aria-hidden />
                       <span className="flex-1 truncate">{city.name}</span>
@@ -143,7 +121,7 @@ export function CommandPalette({
                 </Group>
               ) : null}
 
-              {query.trim().length < 2 ? (
+              {term === null ? (
                 <Group heading="Jump to">
                   {QUICK_LINKS.map((link) => {
                     const Icon = link.icon;

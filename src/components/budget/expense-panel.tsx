@@ -40,7 +40,12 @@ export function ExpensePanel({
   const [date, setDate] = React.useState("");
   const [saving, setSaving] = React.useState(false);
 
-  React.useEffect(() => setExpenses(initial), [initial]);
+  // Adopt the server's list whenever the page revalidates.
+  const [seen, setSeen] = React.useState(initial);
+  if (seen !== initial) {
+    setSeen(initial);
+    setExpenses(initial);
+  }
 
   async function addExpense(event: React.FormEvent) {
     event.preventDefault();

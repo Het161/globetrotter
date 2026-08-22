@@ -36,7 +36,13 @@ export function CockpitBar({
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(trip.name);
 
-  React.useEffect(() => setDraft(trip.name), [trip.name]);
+  // Re-seed the draft when the trip is renamed elsewhere. React's documented
+  // way to adjust state from props — an effect for this would render twice.
+  const [seenName, setSeenName] = React.useState(trip.name);
+  if (seenName !== trip.name) {
+    setSeenName(trip.name);
+    setDraft(trip.name);
+  }
 
   const nights = trip.stops.reduce((sum, stop) => sum + stop.nights, 0);
   const limit = trip.budgetLimit;

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarDays, ImagePlus, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
@@ -32,7 +32,7 @@ export function TripForm() {
   const {
     register,
     handleSubmit,
-    watch,
+    control,
     setError,
     formState: { errors, isSubmitting },
   } = useForm<CreateTripInput>({
@@ -47,8 +47,10 @@ export function TripForm() {
     },
   });
 
-  const startDate = watch("startDate");
-  const endDate = watch("endDate");
+  // useWatch rather than watch(): it subscribes without returning a fresh
+  // function each render, so the React Compiler can still memoize this form.
+  const startDate = useWatch({ control, name: "startDate" });
+  const endDate = useWatch({ control, name: "endDate" });
   const span =
     startDate && endDate && endDate >= startDate ? daysBetween(startDate, endDate) + 1 : null;
 

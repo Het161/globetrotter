@@ -75,16 +75,18 @@ export function TripBuilder({ initialTrip }: { initialTrip: TripDTO }) {
   const selectedStop = trip.stops.find((stop) => stop.id === selectedStopId) ?? null;
   const days = selectedStop ? stopDays(selectedStop) : [];
 
-  // Keep the selected day inside the selected stop's stay at all times.
-  React.useEffect(() => {
-    if (!selectedStop) {
-      setSelectedDate(null);
-      return;
-    }
-    setSelectedDate((current) =>
-      current && stopDays(selectedStop).includes(current) ? current : selectedStop.arrivalDate,
-    );
-  }, [selectedStop]);
+  /**
+   * The selected day is derived, not stored: if the stored one no longer falls
+   * inside the selected stop's stay (the stop moved, or a different stop was
+   * picked) we show the arrival day instead. Deriving avoids an effect and the
+   * extra render an effect would cost.
+   */
+  const activeDate =
+    selectedStop === null
+      ? null
+      : selectedDate && days.includes(selectedDate)
+        ? selectedDate
+        : selectedStop.arrivalDate;
 
   /* --- Mutation plumbing ------------------------------------------------ */
 
@@ -360,7 +362,7 @@ export function TripBuilder({ initialTrip }: { initialTrip: TripDTO }) {
         <DayCanvas
           stop={selectedStop}
           days={days}
-          selectedDate={selectedDate}
+          selectedDate={activeDate}
           budgetByDay={budgetByDay}
           onSelectDate={setSelectedDate}
           onAddActivity={() => setActivityPickerOpen(true)}
@@ -384,7 +386,7 @@ export function TripBuilder({ initialTrip }: { initialTrip: TripDTO }) {
         citySlug={selectedStop?.city.slug ?? null}
         cityName={selectedStop?.city.name ?? null}
         days={days}
-        defaultDate={selectedDate}
+        defaultDate={activeDate}
         onAdd={addActivity}
         busy={pending}
       />

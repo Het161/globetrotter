@@ -6,6 +6,7 @@ import { Loader2, MapPin, Search } from "lucide-react";
 import type { CityDTO } from "@/server/dto";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import { useCurrency } from "@/hooks/use-currency";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/field";
@@ -44,30 +45,14 @@ export function CitySearchSheet({
   const money = useCurrency();
   const [query, setQuery] = React.useState("");
   const [region, setRegion] = React.useState<string | null>(null);
-  const [cities, setCities] = React.useState<CityDTO[]>([]);
-  const [loading, setLoading] = React.useState(true);
-
   const debounced = useDebounce(query, 150);
 
-  React.useEffect(() => {
-    if (!open) return;
-
-    const controller = new AbortController();
-    setLoading(true);
-
-    api
-      .list<CityDTO>(
-        `/cities${api.query({ q: debounced, region: region ?? "", sort: "popular", pageSize: 24 })}`,
-        { signal: controller.signal },
-      )
-      .then((result) => setCities(result.items))
-      .catch(() => {
-        /* aborted */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [debounced, region, open]);
+  // A closed sheet fetches nothing.
+  const { items: cities, loading } = useRemoteList<CityDTO>(
+    open
+      ? `/cities${api.query({ q: debounced, region: region ?? "", sort: "popular", pageSize: 24 })}`
+      : null,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

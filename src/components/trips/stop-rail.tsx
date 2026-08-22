@@ -47,7 +47,14 @@ export function StopRail({
   // the trip's stops into local state and push the new order up on drag end.
   const [order, setOrder] = React.useState(trip.stops);
 
-  React.useEffect(() => setOrder(trip.stops), [trip.stops]);
+  // Re-sync when the server confirms (or rejects) a reorder. Adjusting state
+  // during render is React's prescribed pattern; an effect would render twice
+  // and briefly show the stale order.
+  const [seenStops, setSeenStops] = React.useState(trip.stops);
+  if (seenStops !== trip.stops) {
+    setSeenStops(trip.stops);
+    setOrder(trip.stops);
+  }
 
   return (
     <div className="flex h-full flex-col">

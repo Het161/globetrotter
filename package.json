@@ -5,7 +5,7 @@
   "description": "GlobeTrotter — personalised multi-city trip planner. Odoo x LDCE Hackathon '26.",
   "scripts": {
     "dev": "node scripts/clean-appledouble.mjs && next dev",
-    "build": "node scripts/clean-appledouble.mjs && prisma generate && next build",
+    "build": "node scripts/clean-appledouble.mjs --reset-turbopack-cache && prisma generate && next build",
     "start": "next start",
     "lint": "node scripts/clean-appledouble.mjs && eslint",
     "typecheck": "node scripts/clean-appledouble.mjs && tsc --noEmit",
@@ -67,6 +67,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.3.6",
     "@tailwindcss/postcss": "^4",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",

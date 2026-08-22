@@ -7,6 +7,7 @@ import type { ActivityCategory } from "@prisma/client";
 import type { ActivityDTO } from "@/server/dto";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import { useCurrency } from "@/hooks/use-currency";
 import { Dialog, SheetContent } from "@/components/ui/dialog";
 import { DeckButton } from "@/components/ui/deck-button";
@@ -54,41 +55,27 @@ export function ActivitySearchSheet({
   const [query, setQuery] = React.useState("");
   const [category, setCategory] = React.useState<ActivityCategory | null>(null);
   const [sort, setSort] = React.useState("popular");
-  const [date, setDate] = React.useState(defaultDate ?? days[0] ?? "");
-  const [activities, setActivities] = React.useState<ActivityDTO[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  // The chosen day is derived: a value the user picked wins, but only while it
+  // is still one of this stop's days. Otherwise fall back to the day they came
+  // in from. Deriving avoids re-syncing state in an effect every time the
+  // sheet opens.
+  const [pickedDate, setPickedDate] = React.useState<string | null>(null);
+  const date = pickedDate && days.includes(pickedDate) ? pickedDate : (defaultDate ?? days[0] ?? "");
+
   const [showCustom, setShowCustom] = React.useState(false);
 
   const debounced = useDebounce(query, 150);
 
-  React.useEffect(() => {
-    if (open) setDate(defaultDate ?? days[0] ?? "");
-  }, [open, defaultDate, days]);
-
-  React.useEffect(() => {
-    if (!open || !citySlug) return;
-
-    const controller = new AbortController();
-    setLoading(true);
-
-    api
-      .list<ActivityDTO>(
-        `/cities/${citySlug}/activities${api.query({
+  const { items: activities, loading } = useRemoteList<ActivityDTO>(
+    open && citySlug
+      ? `/cities/${citySlug}/activities${api.query({
           q: debounced,
           category: category ?? "",
           sort,
           pageSize: 30,
-        })}`,
-        { signal: controller.signal },
-      )
-      .then((result) => setActivities(result.items))
-      .catch(() => {
-        /* aborted */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [open, citySlug, debounced, category, sort]);
+        })}`
+      : null,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -108,7 +95,7 @@ export function ActivitySearchSheet({
           {/* Which day it lands on — decided up front, not after the fact. */}
           <label className="block">
             <span className="placard mb-1 block">Add to day</span>
-            <NativeSelect value={date} onChange={(event) => setDate(event.target.value)}>
+            <NativeSelect value={date} onChange={(event) => setPickedDate(event.target.value)}>
               {days.map((day, index) => (
                 <option key={day} value={day}>
                   Day {index + 1} · {weekday(day)} {formatDateShort(day)}

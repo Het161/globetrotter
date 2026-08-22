@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { getPublicTrip } from "@/server/services/share";
 import { getSession } from "@/server/auth/session";
 import { qrSvg } from "@/server/qr";
-import { isAppError } from "@/server/http/errors";
+import { orNotFound } from "@/server/http/errors";
 import { formatMoney } from "@/lib/currency";
 import { routePoints, stopDays } from "@/lib/trip-view";
 import { formatDate, formatDateRange, formatDuration, formatMinute, weekday } from "@/lib/dates";
@@ -34,17 +34,15 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
 
-  try {
-    const { trip, ownerName } = await getPublicTrip(slug);
-    const cities = trip.stops.map((stop) => stop.city.name).join(" → ");
+  const data = await orNotFound(getPublicTrip(slug));
+  if (!data) return { title: "Itinerary not found" };
 
-    return {
-      title: trip.name,
-      description: `${cities || "A trip"} · ${formatDateRange(trip.startDate, trip.endDate)} · planned by ${ownerName} on GlobeTrotter.`,
-    };
-  } catch {
-    return { title: "Itinerary not found" };
-  }
+  const cities = data.trip.stops.map((stop) => stop.city.name).join(" → ");
+
+  return {
+    title: data.trip.name,
+    description: `${cities || "A trip"} · ${formatDateRange(data.trip.startDate, data.trip.endDate)} · planned by ${data.ownerName} on GlobeTrotter.`,
+  };
 }
 
 export default async function PublicTripPage({
@@ -55,13 +53,8 @@ export default async function PublicTripPage({
   const { slug } = await params;
   const viewer = await getSession();
 
-  let data;
-  try {
-    data = await getPublicTrip(slug);
-  } catch (error) {
-    if (isAppError(error) && error.code === "NOT_FOUND") notFound();
-    throw error;
-  }
+  const data = await orNotFound(getPublicTrip(slug));
+  if (!data) notFound();
 
   const { trip, budget, ownerName, viewCount } = data;
 

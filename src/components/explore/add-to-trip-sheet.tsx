@@ -7,6 +7,7 @@ import { CalendarDays, Check, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import type { CityDTO, StopDTO, TripDTO } from "@/server/dto";
 import { api, errorMessage } from "@/lib/api-client";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import {
   Dialog,
   DialogContent,
@@ -38,22 +39,18 @@ export function AddToTripSheet({
   onOpenChange: (open: boolean) => void;
 }) {
   const router = useRouter();
-  const [trips, setTrips] = React.useState<TripDTO[] | null>(null);
   const [pendingId, setPendingId] = React.useState<string | null>(null);
   const [addedId, setAddedId] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (!open) {
-      setAddedId(null);
-      return;
-    }
+  const { items: trips, loading } = useRemoteList<TripDTO>(
+    open ? "/trips?sort=updated&pageSize=20" : null,
+  );
 
-    setTrips(null);
-    api
-      .list<TripDTO>("/trips?sort=updated&pageSize=20")
-      .then((result) => setTrips(result.items))
-      .catch(() => setTrips([]));
-  }, [open]);
+  /** Forget which trip was just added once the dialog closes. */
+  function handleOpenChange(next: boolean) {
+    if (!next) setAddedId(null);
+    onOpenChange(next);
+  }
 
   async function addStop(trip: TripDTO) {
     if (!city) return;
@@ -84,7 +81,7 @@ export function AddToTripSheet({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add {city?.name ?? "city"} to a trip</DialogTitle>
@@ -94,7 +91,7 @@ export function AddToTripSheet({
           </DialogDescription>
         </DialogHeader>
 
-        {trips === null ? (
+        {loading ? (
           <div className="space-y-2">
             {Array.from({ length: 3 }, (_, i) => (
               <Skeleton key={i} className="h-16" />

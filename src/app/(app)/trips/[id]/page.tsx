@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PencilRuler, Wallet } from "lucide-react";
 import { requireUser } from "@/server/auth/session";
 import { getTripCalendar } from "@/server/services/trips";
-import { isAppError } from "@/server/http/errors";
+import { orNotFound } from "@/server/http/errors";
 import { qrSvg } from "@/server/qr";
 import { CrumbLabel } from "@/components/layout/breadcrumbs";
 import { PageHeader } from "@/components/layout/page-header";
@@ -21,68 +21,66 @@ export default async function TripPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const user = await requireUser();
 
-  try {
-    // The calendar service already returns the trip, its days and its budget —
-    // one call covers both tabs on this screen.
-    const { trip, days, budget } = await getTripCalendar(id, user);
-    const canEdit = trip.myRole === "OWNER" || trip.myRole === "EDITOR";
+  const result = await orNotFound(getTripCalendar(id, user));
+  if (!result) notFound();
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const qr = trip.shareSlug ? await qrSvg(`${appUrl}/s/${trip.shareSlug}`) : null;
+  // The calendar service already returns the trip, its days and its budget —
+  // one call covers both tabs on this screen.
+  const { trip, days, budget } = result;
+  const canEdit = trip.myRole === "OWNER" || trip.myRole === "EDITOR";
 
-    return (
-      <>
-        <CrumbLabel value={trip.id} label={trip.name} />
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const qr = trip.shareSlug ? await qrSvg(`${appUrl}/s/${trip.shareSlug}`) : null;
 
-        <PageHeader
-          eyebrow="Itinerary"
-          title={<span className="trip-name">{trip.name}</span>}
-          description={
-            <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-              <StatusChip status={trip.status} />
-              <span className="font-mono text-xs">
-                {formatDateRange(trip.startDate, trip.endDate)} ·{" "}
-                {pluralize(trip.stops.length, "stop")} ·{" "}
-                {pluralize(trip.summary?.nights ?? 0, "night")}
-              </span>
+  return (
+    <>
+      <CrumbLabel value={trip.id} label={trip.name} />
+
+      <PageHeader
+        eyebrow="Itinerary"
+        title={<span className="trip-name">{trip.name}</span>}
+        description={
+          <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <StatusChip status={trip.status} />
+            <span className="font-mono text-xs">
+              {formatDateRange(trip.startDate, trip.endDate)} ·{" "}
+              {pluralize(trip.stops.length, "stop")} ·{" "}
+              {pluralize(trip.summary?.nights ?? 0, "night")}
             </span>
-          }
-          actions={
-            <>
-              {canEdit ? (
-                <DeckButton asChild variant="secondary">
-                  <Link href={`/trips/${trip.id}/build`}>
-                    <PencilRuler />
-                    <span className="hidden sm:inline">Builder</span>
-                  </Link>
-                </DeckButton>
-              ) : null}
-
+          </span>
+        }
+        actions={
+          <>
+            {canEdit ? (
               <DeckButton asChild variant="secondary">
-                <Link href={`/trips/${trip.id}/budget`}>
-                  <Wallet />
-                  <span className="hidden sm:inline">Budget</span>
+                <Link href={`/trips/${trip.id}/build`}>
+                  <PencilRuler />
+                  <span className="hidden sm:inline">Builder</span>
                 </Link>
               </DeckButton>
+            ) : null}
 
-              {trip.myRole === "OWNER" ? (
-                <SharePanel trip={trip} qrSvg={qr} appUrl={appUrl} />
-              ) : null}
-            </>
-          }
-        />
+            <DeckButton asChild variant="secondary">
+              <Link href={`/trips/${trip.id}/budget`}>
+                <Wallet />
+                <span className="hidden sm:inline">Budget</span>
+              </Link>
+            </DeckButton>
 
-        {trip.description ? (
-          <p className="mb-7 max-w-2xl text-sm leading-relaxed text-fog text-pretty">
-            {trip.description}
-          </p>
-        ) : null}
+            {trip.myRole === "OWNER" ? (
+              <SharePanel trip={trip} qrSvg={qr} appUrl={appUrl} />
+            ) : null}
+          </>
+        }
+      />
 
-        <ItineraryView trip={trip} budget={budget} days={days} />
-      </>
-    );
-  } catch (error) {
-    if (isAppError(error) && error.code === "NOT_FOUND") notFound();
-    throw error;
-  }
+      {trip.description ? (
+        <p className="mb-7 max-w-2xl text-sm leading-relaxed text-fog text-pretty">
+          {trip.description}
+        </p>
+      ) : null}
+
+      <ItineraryView trip={trip} budget={budget} days={days} />
+    </>
+  );
 }

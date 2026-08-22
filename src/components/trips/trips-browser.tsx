@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import type { TripDTO } from "@/server/dto";
 import { api } from "@/lib/api-client";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useRemoteList } from "@/hooks/use-remote-list";
 import { TripCard } from "./trip-card";
 import { DeckButton } from "@/components/ui/deck-button";
 import { Input, NativeSelect } from "@/components/ui/field";
@@ -38,47 +39,29 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
   const [sort, setSort] = React.useState("updated");
   const [page, setPage] = React.useState(1);
 
-  const [trips, setTrips] = React.useState(initial.items);
-  const [total, setTotal] = React.useState(initial.total);
-  const [loading, setLoading] = React.useState(false);
   const [pendingDelete, setPendingDelete] = React.useState<TripDTO | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  /** Ids removed locally, so a deleted card disappears before the refetch. */
+  const [removed, setRemoved] = React.useState<string[]>([]);
 
   const debouncedQuery = useDebounce(query, 150);
 
-  // Skip the fetch on first render — the server already handed us page one.
-  const isFirstRender = React.useRef(true);
+  const {
+    items,
+    total,
+    loading,
+  } = useRemoteList<TripDTO>(
+    `/trips${api.query({ tab, q: debouncedQuery, status, sort, page, pageSize: PAGE_SIZE })}`,
+    initial,
+  );
 
-  React.useEffect(() => {
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
+  const trips = items.filter((trip) => !removed.includes(trip.id));
 
-    const controller = new AbortController();
-    setLoading(true);
-
-    api
-      .list<TripDTO>(
-        `/trips${api.query({ tab, q: debouncedQuery, status, sort, page, pageSize: PAGE_SIZE })}`,
-        { signal: controller.signal },
-      )
-      .then((result) => {
-        setTrips(result.items);
-        setTotal(result.total);
-      })
-      .catch(() => {
-        /* aborted */
-      })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [tab, debouncedQuery, status, sort, page]);
-
-  // Any filter change puts us back on page one.
-  React.useEffect(() => {
+  /** Every filter control resets to page one — done here, not in an effect. */
+  function applyFilter(change: () => void) {
+    change();
     setPage(1);
-  }, [tab, debouncedQuery, status, sort]);
+  }
 
   async function confirmDelete() {
     if (!pendingDelete) return;
@@ -86,8 +69,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
 
     try {
       await api.delete(`/trips/${pendingDelete.id}`);
-      setTrips((current) => current.filter((t) => t.id !== pendingDelete.id));
-      setTotal((current) => Math.max(0, current - 1));
+      setRemoved((current) => [...current, pendingDelete.id]);
       toast.success(`Deleted “${pendingDelete.name}”`);
       setPendingDelete(null);
     } finally {
@@ -102,7 +84,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
     <>
       {/* --- Controls -------------------------------------------------- */}
       <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center">
-        <Tabs value={tab} onValueChange={(value) => setTab(value as "mine" | "shared")}>
+        <Tabs value={tab} onValueChange={(value) => applyFilter(() => setTab(value as "mine" | "shared"))}>
           <TabsList>
             <TabsTrigger value="mine">My trips</TabsTrigger>
             <TabsTrigger value="shared">Shared with me</TabsTrigger>
@@ -116,7 +98,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
           />
           <Input
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(event) => applyFilter(() => setQuery(event.target.value))}
             placeholder="Search trips…"
             aria-label="Search trips by name"
             className="pl-9 pr-9"
@@ -124,7 +106,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
           {query ? (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => applyFilter(() => setQuery(""))}
               aria-label="Clear search"
               className="absolute right-2 top-1/2 grid size-7 -translate-y-1/2 place-items-center rounded-md text-fog hover:text-cloud"
             >
@@ -136,7 +118,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
         <div className="flex gap-3 lg:ml-auto">
           <NativeSelect
             value={status}
-            onChange={(event) => setStatus(event.target.value)}
+            onChange={(event) => applyFilter(() => setStatus(event.target.value))}
             aria-label="Filter by status"
             className="w-40"
           >
@@ -149,7 +131,7 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
 
           <NativeSelect
             value={sort}
-            onChange={(event) => setSort(event.target.value)}
+            onChange={(event) => applyFilter(() => setSort(event.target.value))}
             aria-label="Sort trips"
             className="w-44"
           >
@@ -184,10 +166,12 @@ export function TripsBrowser({ initial }: { initial: { items: TripDTO[]; total: 
             tab === "shared" ? null : filtered ? (
               <DeckButton
                 variant="secondary"
-                onClick={() => {
-                  setQuery("");
-                  setStatus("");
-                }}
+                onClick={() =>
+                  applyFilter(() => {
+                    setQuery("");
+                    setStatus("");
+                  })
+                }
               >
                 Clear filters
               </DeckButton>

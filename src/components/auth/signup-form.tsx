@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { signupSchema, type SignupInput } from "@/lib/validators/auth";
@@ -18,7 +18,7 @@ export function SignupForm() {
     register,
     handleSubmit,
     setError,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
@@ -26,7 +26,9 @@ export function SignupForm() {
     mode: "onBlur",
   });
 
-  const password = watch("password");
+  // useWatch rather than watch(): it subscribes without returning a fresh
+  // function each render, so the React Compiler can still memoize this form.
+  const password = useWatch({ control, name: "password" });
 
   async function onSubmit(values: SignupInput) {
     try {
