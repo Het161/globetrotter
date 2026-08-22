@@ -10,6 +10,8 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // `next dev` writes here — see distDir in next.config.ts
+      ".next-dev/**",
       "out/**",
       "build/**",
       "prisma/migrations/**",

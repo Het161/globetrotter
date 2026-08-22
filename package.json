@@ -4,8 +4,9 @@
   "private": true,
   "description": "GlobeTrotter — personalised multi-city trip planner. Odoo x LDCE Hackathon '26.",
   "scripts": {
-    "dev": "node scripts/clean-appledouble.mjs --reset-turbopack-cache && next dev",
-    "build": "node scripts/clean-appledouble.mjs --reset-turbopack-cache && prisma generate && next build",
+    "preinstall": "node -e \"if(!(process.env.npm_config_user_agent||'').startsWith('pnpm')){console.error('\\n  This project uses pnpm. Run:  corepack enable && pnpm install\\n');process.exit(1)}\"",
+    "dev": "node scripts/clean-appledouble.mjs && next dev",
+    "build": "node scripts/clean-appledouble.mjs && prisma generate && next build",
     "start": "next start",
     "lint": "node scripts/clean-appledouble.mjs && eslint",
     "typecheck": "node scripts/clean-appledouble.mjs && tsc --noEmit",

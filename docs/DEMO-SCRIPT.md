@@ -162,7 +162,7 @@ Then, if a terminal is visible, `pnpm bench`:
 |---|---|
 | Blank screen or stale data | `pnpm db:seed`, reload |
 | Globe missing | Expected without the textures — arcs and atmosphere still render. Don't dwell. |
-| Dev server won't start after a build | `pnpm dev` already clears the Turbopack caches; if it persists, `rm -rf .next` |
+| Dev server won't start | Something else is on `:3000` — `pkill -f "next dev"`, then `pnpm dev`. Dev and build use separate directories, so a build can't block it. |
 | Reset-link banner missing | Development only. Check `NODE_ENV`. |
 
 **Don't demo:** deleting the demo account, or `pnpm db:reset` mid-recording.

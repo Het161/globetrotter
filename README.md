@@ -163,8 +163,26 @@ straight answers to "why did you do it that way".
 
 - **`pnpm db:reset` will refuse to run under an AI agent** without explicit
   consent — that's a Prisma 6.19 safety feature, not a bug. Run it yourself.
-- **This repo was developed on an exFAT volume.** Two workarounds exist for
-  that and are documented in `scripts/clean-appledouble.mjs`: macOS AppleDouble
-  sidecars (`._page.tsx`) are stripped before every gate, and Turbopack's
-  caches are dropped before `dev` and `build` because the two can't share them
-  on exFAT. On APFS or ext4 neither costs you anything.
+- **Use pnpm, not npm.** `node_modules` is pnpm-linked, and `npm install` would
+  rebuild it incorrectly — a `preinstall` guard stops that with a message.
+  `npm run <script>` is fine either way.
+
+  ```bash
+  corepack enable && pnpm install
+  ```
+
+- **This repo was developed on an exFAT volume**, which needs one workaround,
+  documented in `scripts/clean-appledouble.mjs`. macOS writes AppleDouble
+  sidecars (`._name`) next to any file carrying extended attributes. They are
+  binary but keep the original name, so `._page.tsx` looks like a route to
+  Next.js, `._budget.test.ts` looks like a test to vitest, and — the one that
+  took longest to find — `._00000001.sst` inside Turbopack's cache database
+  makes every build after the first fail with `Failed to open database …
+  invalid digit found in string`, because Turbopack parses those filenames as
+  sequence numbers. Deleting the sidecars before each gate takes ~0.3 s and
+  fixes all three. On APFS or ext4 it finds nothing and costs nothing.
+
+- **`next dev` and `next build` use separate `distDir`s** (`.next-dev` and
+  `.next`, see `next.config.ts`). Next locks a `distDir` so dev and build can't
+  write one concurrently; giving them one each means you can run a build while
+  the dev server is up.

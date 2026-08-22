@@ -101,21 +101,50 @@ errors in two families and all were addressed rather than disabled:
 
 Final state: 0 errors, 0 warnings.
 
-**exFAT workarounds, documented in `scripts/clean-appledouble.mjs`.** This repo
-was developed on an exFAT volume, which produced two problems worth recording
-because they look like application bugs:
+**exFAT: one root cause, not two.** This repo was developed on an exFAT volume.
+macOS writes an AppleDouble sidecar (`._name`) beside any file carrying extended
+attributes; the sidecars are binary but keep the original name, so anything that
+trusts a directory listing breaks. That showed up in three places:
 
-1. macOS writes AppleDouble sidecars (`._page.tsx`) for extended attributes.
-   They're binary but keep the extension, so Next treated `._page.tsx` as a
-   route and vitest treated `._budget.test.ts` as a test — both failing on a NUL
-   byte. Stripped before every gate.
-2. `next dev` and `next build` each write a Turbopack cache under `.next`, and
-   on exFAT neither can reopen the other's. Whichever ran second died with
-   `Failed to open database: invalid digit found in string`. Both commands now
-   drop `.next/cache`, `.next/turbopack` and `.next/dev` first. Build *output*
-   is untouched.
+1. `._page.tsx` looked like a route to Next.js.
+2. `._budget.test.ts` looked like a test to vitest.
+3. `._00000001.sst`, inside Turbopack's cache database, is not a sequence
+   number — so opening the cache died with `Failed to open database … invalid
+   digit found in string`, and **every build after the first one failed**.
 
-Neither costs anything on APFS or ext4.
+I originally misdiagnosed (3) as `next dev` and `next build` fighting over a
+shared Turbopack cache, and "fixed" it by deleting `.next/cache`,
+`.next/turbopack` and `.next/dev` before every run. That was wrong twice over:
+
+- `.next/dev` is not a cache. It is Next 16's dev-server runtime directory and
+  holds the lock file (`{"pid":…,"port":…}`) that stops two servers sharing a
+  `distDir`. Deleting it under a running server made that server log
+  *"The directory … was deleted … Restarting the server to recover"*, restart,
+  and re-take its port — which silently killed a second `next dev` started at
+  the same moment.
+- It threw away a ~115 MB warm cache on every single run.
+
+The actual fix is to strip the sidecars from the build directories too, and
+delete nothing else. Consecutive builds went from *fail* to **3.5 s → 1.6 s →
+1.3 s** as the cache warms.
+
+Two follow-ons from that investigation:
+
+- **`xattr -rc` was removed.** It was there to stop sidecars regenerating. It
+  doesn't — a "clean" second pass still removed 1147 of them — and it cost ~80 s
+  because it recurses `node_modules`. Deleting the files is the whole job and
+  takes ~0.3 s.
+- **dev and build now use separate `distDir`s** (`.next-dev` / `.next`, in
+  `next.config.ts`). No longer required for correctness, but Next locks a
+  `distDir` against concurrent writers, so one each means a build can run while
+  the dev server is up.
+
+None of this costs anything on APFS or ext4.
+
+**A `preinstall` guard rejects npm.** `node_modules` is pnpm-linked;
+`npm install` would rebuild it incorrectly. The guard checks
+`npm_config_user_agent` and exits with a one-line instruction. `npm run <script>`
+is unaffected, because only the install lifecycle is blocked.
 
 **three.js was deduped.** `react-globe.gl` pulls three 0.185 while we had pinned
 0.171, so two copies were being bundled — the browser console said so. Pinned to
