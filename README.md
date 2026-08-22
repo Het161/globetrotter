@@ -1,12 +1,178 @@
-# GlobeTrotter
+<div align="center">
 
-**Plan the route. Know the cost. Share the story.**
+<img src="docs/images/banner.svg" alt="GlobeTrotter — plan the route, know the cost, share the story" width="100%">
 
-A personalised multi-city trip planner. Build an itinerary across as many cities
-as you like, drop activities onto real days, watch the budget update as you
-plan, and share the finished plan as a read-only page anyone can copy.
+**A multi-city trip planner where the route, the calendar and the money are the same object.**
 
-Built for the Odoo × LDCE Ahmedabad Hackathon '26.
+Move a city and every date re-flows, every activity travels with it, and the total
+changes while your finger is still down.
+
+<sub>
+Next.js&nbsp;16 · React&nbsp;19 · TypeScript&nbsp;strict · PostgreSQL&nbsp;15 · Prisma&nbsp;6 · Tailwind&nbsp;v4
+</sub>
+
+<sub>Built for the **Odoo × LDCE Ahmedabad Hackathon '26**</sub>
+
+</div>
+
+---
+
+## What it is
+
+Plan a trip across as many cities as you like. Give each stop a date range and a
+nightly cost, drop activities onto real days, and watch a live budget break the
+whole thing down by category, by stop and by day — flagging the days that go
+over your allowance. When it's ready, publish it as a read-only page anyone can
+open and copy into their own account.
+
+Everything on every screen is real: **48 cities**, **288 activities**, 3 demo
+trips, all out of PostgreSQL. There is no mock data path in the running app.
+
+---
+
+## See it
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+<img src="docs/images/dashboard.png" alt="Dashboard">
+
+**Flight deck** — a WebGL globe drawing your next route arc by arc, a departure
+board counting down, and planned spend on split-flap digits.
+
+</td>
+<td width="50%" valign="top">
+
+<img src="docs/images/builder.png" alt="Trip builder">
+
+**Builder** — drag a stop and the dates below it re-flow. The running total in
+the header is computed in the browser by the same engine the server uses.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<img src="docs/images/explore.png" alt="Explore">
+
+**Explore** — trigram search across cities and activities, answering in
+single-digit milliseconds, with the measured server time shown live in the
+header.
+
+</td>
+<td width="50%" valign="top">
+
+<img src="docs/images/share.png" alt="Public share page">
+
+**Share** — a public, read-only page with its own OG image and QR code, both
+rendered locally. One button copies the whole itinerary into your own account.
+
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+
+<img src="docs/images/budget.png" alt="Budget breakdown">
+
+**Budget** — where the money goes, cost by stop, and a day-by-day bar chart
+where over-limit days turn ember. All three budget states are visible at once.
+
+</td>
+<td width="50%" valign="top">
+
+<img src="docs/images/admin.png" alt="Admin analytics">
+
+**Admin** — real aggregates over the live database: user and trip counts, the
+most-planned cities, the most-added activities.
+
+<br>
+
+<img src="docs/images/landing.png" alt="Landing page">
+
+**Landing** — a 2.6-second opening: a route draws itself between four cities,
+each node lands with a ring, then the whole thing lifts away.
+
+</td>
+</tr>
+</table>
+
+---
+
+## Architecture
+
+<div align="center">
+  <img src="docs/images/architecture.svg" alt="GlobeTrotter architecture — browser, App Router, services, pure engine, Prisma and PostgreSQL as stacked layers" width="100%">
+</div>
+
+Five layers, one direction of travel. Nothing skips a layer, and two rules hold
+the whole thing together:
+
+**1. The engine is pure.** `budget.ts` and `stop-dates.ts` take plain numbers and
+plain ISO strings and return plain numbers. No database, no `Date` objects, no
+I/O. That's what lets the *same file* run in a route handler and in the browser
+during a drag — so the optimistic total you see mid-gesture and the total the
+server later confirms cannot disagree. It's also why the tests are worth
+something: 21 of them, all against this layer, running in 13 ms.
+
+**2. Nothing from Prisma crosses to the client.** `Decimal` and `Date` stop at
+the service layer and come back as `number` and `"YYYY-MM-DD"`. The DTO types in
+`src/server/dto.ts` are the only shapes a component ever sees, so a currency
+value can't silently become a float and a calendar date can't shift by a
+timezone.
+
+<details>
+<summary><b>What a mutation actually does</b> — dragging Kyoto above Tokyo</summary>
+
+<br>
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as You
+    participant C as Builder (client)
+    participant E as engine/stop-dates.ts
+    participant A as POST /trips/:id/stops/reorder
+    participant D as PostgreSQL
+
+    U->>C: drop Kyoto above Tokyo
+    C->>E: reflowStops(order, nights)
+    E-->>C: new dates + new total
+    Note over C: paints immediately — no await
+    C->>A: { stopIds: [...] }
+    A->>E: reflowStops(...) again, server-side
+    A->>D: one transaction — reorder,<br/>rewrite dates, move activities
+    D-->>A: committed
+    A-->>C: the authoritative trip
+    Note over C: matches what's on screen.<br/>On failure, roll back to the snapshot.
+```
+
+The client and the server call the identical function, so step 3 and step 6
+produce the same answer. The transaction is the interesting part: reordering
+stops rewrites the date range of every stop after the moved one, and each
+activity is pinned to a day *within* its stop — so the activities move too, in
+the same commit. Half-applied is not a reachable state.
+
+</details>
+
+<details>
+<summary><b>The 11 tables</b></summary>
+
+<br>
+
+`User` · `PasswordResetToken` · `City` · `Activity` · `Trip` · `TripStop` ·
+`StopActivity` · `TripExpense` · `TripCollaborator` · `SavedCity` ·
+`ActivityEvent`
+
+Money is `Decimal(10,2)`, never a float. Calendar dates are `@db.Date`, never a
+timestamp — a trip that starts on 24 March starts on 24 March in every timezone.
+Search runs on `pg_trgm` GIN indexes, which is why it's measured in single-digit
+milliseconds rather than a `LIKE '%…%'` sequential scan.
+
+Full ER diagram and the reasoning behind every index:
+[`docs/DB-SCHEMA.md`](docs/DB-SCHEMA.md).
+
+</details>
 
 ---
 
@@ -53,25 +219,6 @@ The login screen has a one-click button for each, so you don't have to type them
 
 ---
 
-## Scripts
-
-| Command | What it does |
-|---|---|
-| `pnpm dev` | Development server |
-| `pnpm build` / `pnpm start` | Production build and serve |
-| `pnpm verify` | typecheck → lint → tests → build. The gate before every commit. |
-| `pnpm typecheck` | `tsc --noEmit`, strict, no `any` |
-| `pnpm lint` | ESLint incl. the React Compiler rules |
-| `pnpm test` | 21 vitest unit tests over the budget and date engines |
-| `pnpm db:migrate` | Apply migrations |
-| `pnpm db:seed` | Seed (idempotent — safe to re-run) |
-| `pnpm db:reset` | Drop, re-migrate and re-seed. **Destroys data.** |
-| `pnpm db:studio` | Prisma Studio |
-| `pnpm bench` | Measure the API against the performance budget |
-| `pnpm check:images` | HEAD-check every image URL in the database |
-
----
-
 ## Measured performance
 
 `pnpm bench` with the app running and the database seeded. These are the
@@ -102,16 +249,19 @@ last measured response time live, in the cockpit bar and the Explore header.
 | Styling | Tailwind v4 (`@theme` tokens), Radix primitives restyled |
 | Validation | zod schemas shared by client forms and server handlers |
 | Auth | bcryptjs + `jose` JWT in an httpOnly cookie. No auth library. |
-| Motion | `motion` — reorder, layout animation, page transitions |
+| Motion | `motion` — reorder, layout animation; CSS for page transitions |
 | 3D | `react-globe.gl` / three.js, dynamically imported, globe routes only |
 | Charts | recharts, dynamically imported, budget and admin routes only |
 
-### Everything is real data
+**17 screens, 36 REST route handlers, 177 TypeScript files, ~17,400 lines.**
 
-There is no static JSON data source in the running app. All 48 cities, 288
-activities, every trip and every number on the admin dashboard comes out of
-PostgreSQL. Seed data lives in `prisma/seed-data/` and is loaded by
-`prisma/seed.ts`.
+### The design system
+
+Dark by default — "night atlas". Serif display type against a monospace data
+voice, so a number never looks like prose. Buttons carry a real edge and press
+into it. Surfaces sit on a backdrop that moves slowly enough that you notice it
+only if you look. Every animation is behind `prefers-reduced-motion`, and the
+whole palette is defined once as `@theme` tokens in `src/app/globals.css`.
 
 ### It works offline
 
@@ -144,10 +294,6 @@ src/
   lib/             validators, currency, dates, api-client
 ```
 
-Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the layers fit
-together, and [`docs/REVIEW-CHEATSHEET.md`](docs/REVIEW-CHEATSHEET.md) for
-straight answers to "why did you do it that way".
-
 | Document | Contents |
 |---|---|
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Layering, data flow, the design system |
@@ -155,7 +301,26 @@ straight answers to "why did you do it that way".
 | [`docs/API.md`](docs/API.md) | Every endpoint with a request and a response |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Decisions taken during the build, and why |
 | [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) | The five-minute demo, in order |
-| [`docs/REVIEW-CHEATSHEET.md`](docs/REVIEW-CHEATSHEET.md) | Q&A for the code review |
+| [`docs/REVIEW-CHEATSHEET.md`](docs/REVIEW-CHEATSHEET.md) | Straight answers to "why did you do it that way" |
+
+---
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Development server |
+| `pnpm build` / `pnpm start` | Production build and serve |
+| `pnpm verify` | typecheck → lint → tests → build. The gate before every commit. |
+| `pnpm typecheck` | `tsc --noEmit`, strict, no `any` |
+| `pnpm lint` | ESLint incl. the React Compiler rules |
+| `pnpm test` | 21 vitest unit tests over the budget and date engines |
+| `pnpm db:migrate` | Apply migrations |
+| `pnpm db:seed` | Seed (idempotent — safe to re-run) |
+| `pnpm db:reset` | Drop, re-migrate and re-seed. **Destroys data.** |
+| `pnpm db:studio` | Prisma Studio |
+| `pnpm bench` | Measure the API against the performance budget |
+| `pnpm check:images` | HEAD-check every image URL in the database |
 
 ---
 
