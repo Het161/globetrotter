@@ -188,6 +188,11 @@ export function computeBudget(input: BudgetInput): BudgetBreakdown {
     };
   });
 
+  // Rounding each day to cents can leave the day sum a cent or two off the
+  // total (spreading $42 across 9 days is the usual culprit). Push the
+  // remainder onto the busiest day so `sum(byDay) === total` holds exactly.
+  settleRounding(byDay, total, dailyLimit);
+
   const overBudgetDays = byDay.filter((d) => d.status === "over").map((d) => d.date);
 
   return {
@@ -213,8 +218,21 @@ export function computeBudget(input: BudgetInput): BudgetBreakdown {
     budgetLimit: input.budgetLimit,
     dailyLimit: dailyLimit === null ? null : round2(dailyLimit),
     overBudgetDays,
-    savingTips: buildSavingTips(input, byStop, byCategory, total),
+    savingTips: buildSavingTips(input, byCategory, total),
   };
+}
+
+/** Keep the per-day figures adding up to the headline total, to the cent. */
+function settleRounding(byDay: DayBudget[], total: number, dailyLimit: number | null) {
+  if (byDay.length === 0) return;
+
+  const summed = round2(byDay.reduce((sum, d) => sum + d.spend, 0));
+  const drift = round2(total - summed);
+  if (drift === 0) return;
+
+  const busiest = byDay.reduce((max, d) => (d.spend > max.spend ? d : max), byDay[0]);
+  busiest.spend = round2(busiest.spend + drift);
+  busiest.status = dayStatus(busiest.spend, dailyLimit);
 }
 
 function dayStatus(spend: number, dailyLimit: number | null): DayStatus {
@@ -230,7 +248,6 @@ function dayStatus(spend: number, dailyLimit: number | null): DayStatus {
  */
 function buildSavingTips(
   input: BudgetInput,
-  byStop: StopBudget[],
   byCategory: Record<BudgetCategory, number>,
   total: number,
 ): SavingTip[] {
