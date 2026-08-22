@@ -149,11 +149,29 @@ export function Postcard({
           }}
         />
 
-        {/* Ink wash so type stays readable over any gradient or photo. */}
+        {/* Ink wash so type stays readable over any gradient or photo. A photo
+            needs more of it than a region gradient: the gradients were picked
+            to stay legible under white type, a photograph of a city at midday
+            was not. */}
         <div
           aria-hidden
-          className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent"
+          className={cn(
+            "absolute inset-0 bg-gradient-to-t to-transparent",
+            city.imageUrl ? "from-ink/92 via-ink/40" : "from-ink/85 via-ink/25",
+          )}
         />
+
+        {/* Second scrim, top-down. The wash above only protects the bottom, but
+            the stamp lives top-right and callers drop status chips top-left —
+            and skies are the brightest part of most of these photographs.
+            Skipped for the gradients, which are dark up there already. */}
+        {city.imageUrl && (
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-ink/65 to-transparent"
+          />
+        )}
+
         <div aria-hidden className="grain" />
 
         {!minimal && (
@@ -174,6 +192,8 @@ export function Postcard({
             <div
               className={cn(
                 "absolute bottom-2.5 left-4 font-mono tabular-nums tracking-[0.1em] text-cloud/60",
+                // Small mono type is the first thing a busy photograph eats.
+                city.imageUrl && "text-cloud/80 drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)]",
                 s.meta,
               )}
               aria-hidden
@@ -195,7 +215,14 @@ export function Postcard({
             {city.name}
           </NameTag>
           {!minimal && (
-            <p className="placard absolute bottom-2.5 right-4 text-cloud/55">{city.country}</p>
+            <p
+              className={cn(
+                "placard absolute bottom-2.5 right-4 text-cloud/55",
+                city.imageUrl && "text-cloud/80 drop-shadow-[0_1px_5px_rgba(0,0,0,0.95)]",
+              )}
+            >
+              {city.country}
+            </p>
           )}
         </div>
 

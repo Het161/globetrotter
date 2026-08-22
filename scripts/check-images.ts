@@ -4,9 +4,13 @@
  *
  *   pnpm check:images
  *
- * Cities and activities default to `imageUrl: null` — the Postcard component
- * renders instead — so a clean run on seed data reports "nothing to check",
- * which is the correct answer rather than a failure.
+ * All 48 cities ship a photo under `public/cities/`, so this checks those are
+ * actually being served. Activities still default to `imageUrl: null` and fall
+ * back to the Postcard component, so they contribute nothing to check.
+ *
+ * The paths are app-relative, which means the dev or production server has to
+ * be up for this to mean anything — it resolves them against
+ * NEXT_PUBLIC_APP_URL.
  */
 import { PrismaClient } from "@prisma/client";
 

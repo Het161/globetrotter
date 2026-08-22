@@ -4,6 +4,8 @@
  * Everything the app shows comes from here — there is no static JSON data
  * source anywhere in the running application.
  */
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { PrismaClient, type Prisma } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { cities } from "./seed-data/cities";
@@ -29,6 +31,19 @@ function addDays(iso: string, n: number): string {
   return new Date(utcDate(iso).getTime() + n * MS_PER_DAY).toISOString().slice(0, 10);
 }
 
+/**
+ * The photo for a city, or null when we don't ship one — in which case the
+ * Postcard component draws its region gradient instead.
+ *
+ * The path is derived from the slug rather than stored per city, but it is
+ * *checked* rather than assumed: adding a 49th city without adding its photo
+ * should fall back to the postcard, not point at a 404.
+ */
+function cityImage(slug: string): string | null {
+  const path = `/cities/${slug}.webp`;
+  return existsSync(join(process.cwd(), "public", path)) ? path : null;
+}
+
 async function main() {
   console.log("→ seeding GlobeTrotter");
 
@@ -36,7 +51,10 @@ async function main() {
   for (const city of cities) {
     await db.city.upsert({
       where: { slug: city.slug },
-      update: {},
+      // Photos are the one field a re-seed backfills. Everything else is left
+      // alone so a re-run can't overwrite a database someone has been using,
+      // but a city that gained a picture since the last seed should get it.
+      update: { imageUrl: cityImage(city.slug) },
       create: {
         slug: city.slug,
         name: city.name,
@@ -50,12 +68,14 @@ async function main() {
         currency: city.currency,
         timezone: city.timezone,
         description: city.description,
+        imageUrl: cityImage(city.slug),
         avgStayCost: city.avgStayCost,
         avgMealCost: city.avgMealCost,
       },
     });
   }
-  console.log(`  cities      ${cities.length}`);
+  const withPhoto = cities.filter((c) => cityImage(c.slug)).length;
+  console.log(`  cities      ${cities.length} (${withPhoto} with photos)`);
 
   const cityBySlug = new Map(
     (await db.city.findMany()).map((c) => [c.slug, c] as const),

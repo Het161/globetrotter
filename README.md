@@ -27,6 +27,8 @@ open and copy into their own account.
 
 Everything on every screen is real: **48 cities**, **288 activities**, 3 demo
 trips, all out of PostgreSQL. There is no mock data path in the running app.
+Every city carries a real photograph of itself, shipped with the repo rather
+than hot-linked — see [photo credits](docs/IMAGE-CREDITS.md).
 
 ---
 
@@ -270,9 +272,19 @@ whole palette is defined once as `@theme` tokens in `src/app/globals.css`.
 ### It works offline
 
 No runtime network dependency: fonts are committed to `public/fonts`, globe
-textures to `public/globe`, QR codes are generated server-side by the `qrcode`
-package, and OG images are rendered locally by `next/og`. Unplug the machine
-and every screen still works.
+textures to `public/globe`, all 48 city photographs to `public/cities`, QR codes
+are generated server-side by the `qrcode` package, and OG images are rendered
+locally by `next/og`. Unplug the machine and every screen still works.
+
+The city photos are Wikimedia Commons originals, resized to 1000×563 and encoded
+as WebP (~86 KB each, 4 MB for the set) by `scripts/build-city-images.mjs`.
+They are stored rather than hot-linked for the same reason as everything else
+here, and because 48 cards going blank on conference wifi is not a risk worth
+taking. Author and licence for each one is in
+[`docs/IMAGE-CREDITS.md`](docs/IMAGE-CREDITS.md).
+
+Next's image optimiser is deliberately off — see the comment in `next.config.ts`
+for the exFAT reason, which is not a preference.
 
 ---
 
@@ -305,6 +317,7 @@ src/
 | [`docs/API.md`](docs/API.md) | Every endpoint with a request and a response |
 | [`docs/DECISIONS.md`](docs/DECISIONS.md) | Decisions taken during the build, and why |
 | [`docs/DEMO-SCRIPT.md`](docs/DEMO-SCRIPT.md) | The five-minute demo, in order |
+| [`docs/IMAGE-CREDITS.md`](docs/IMAGE-CREDITS.md) | Author and licence for all 48 city photos |
 | [`docs/REVIEW-CHEATSHEET.md`](docs/REVIEW-CHEATSHEET.md) | Straight answers to "why did you do it that way" |
 
 ---
