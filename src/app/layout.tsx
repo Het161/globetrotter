@@ -21,7 +21,10 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={fontClassNames}>
+    // `scroll-behavior: smooth` is set on <html> in globals.css. Next needs
+    // this attribute to know that's deliberate, otherwise it warns and route
+    // transitions animate their scroll instead of jumping.
+    <html lang="en" className={fontClassNames} data-scroll-behavior="smooth">
       <body className="min-h-dvh bg-ink text-cloud antialiased">
         {children}
         <Toaster

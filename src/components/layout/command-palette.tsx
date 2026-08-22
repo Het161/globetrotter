@@ -173,10 +173,16 @@ export function useCommandPalette() {
 
   React.useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() === "k" && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        setOpen((value) => !value);
-      }
+      // Cheap early-out: almost every keystroke on the page lands here.
+      if (!event.metaKey && !event.ctrlKey) return;
+
+      // `key` is optional on KeyboardEvent for good reason — browser autofill
+      // and password managers dispatch synthetic keydown events without it, so
+      // a document-level listener can't assume it's a string.
+      if (event.key?.toLowerCase() !== "k") return;
+
+      event.preventDefault();
+      setOpen((value) => !value);
     };
 
     document.addEventListener("keydown", onKeyDown);
