@@ -292,6 +292,107 @@
   }
 }
 
+/* --- Radix open/close states ------------------------------------------- */
+
+@keyframes gt-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes gt-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* Dialogs are centred with a translate, so the scale has to compose with it. */
+@keyframes gt-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes gt-dialog-out {
+  from {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+}
+
+@keyframes gt-slide-right-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes gt-slide-right-out {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes gt-slide-bottom-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes gt-slide-bottom-out {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes gt-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes gt-pop-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -479,6 +580,44 @@
       var(--color-line-strong) 0 6px,
       transparent 6px 12px
     );
+  }
+
+  /* --- Radix state animations -------------------------------------------
+     Applied by data-state so overlays, dialogs, sheets and poppers all
+     animate in and out without pulling in a plugin. */
+  .anim-overlay[data-state="open"] {
+    animation: gt-fade-in 200ms var(--ease-deck);
+  }
+  .anim-overlay[data-state="closed"] {
+    animation: gt-fade-out 160ms var(--ease-deck);
+  }
+
+  .anim-dialog[data-state="open"] {
+    animation: gt-dialog-in var(--dur-enter) var(--ease-deck);
+  }
+  .anim-dialog[data-state="closed"] {
+    animation: gt-dialog-out 160ms var(--ease-deck);
+  }
+
+  .anim-sheet-right[data-state="open"] {
+    animation: gt-slide-right-in var(--dur-enter) var(--ease-deck);
+  }
+  .anim-sheet-right[data-state="closed"] {
+    animation: gt-slide-right-out 180ms var(--ease-deck);
+  }
+
+  .anim-sheet-bottom[data-state="open"] {
+    animation: gt-slide-bottom-in var(--dur-enter) var(--ease-deck);
+  }
+  .anim-sheet-bottom[data-state="closed"] {
+    animation: gt-slide-bottom-out 180ms var(--ease-deck);
+  }
+
+  .anim-pop[data-state="open"] {
+    animation: gt-pop-in var(--dur-hover) var(--ease-deck);
+  }
+  .anim-pop[data-state="closed"] {
+    animation: gt-pop-out 120ms var(--ease-deck);
   }
 
   /* --- Skeleton --------------------------------------------------------- */

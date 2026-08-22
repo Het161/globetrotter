@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ZodError, type ZodType } from "zod";
+import { ZodError, type z, type ZodTypeAny } from "zod";
 import { AppError, isAppError } from "./errors";
 
 /* -------------------------------------------------------------------------- */
@@ -48,6 +48,8 @@ type HandlerArgs<TInput> = {
 
 type Handler<TInput, TOut> = (args: HandlerArgs<TInput>) => Promise<TOut>;
 
+type RouteHandler = (req: NextRequest, ctx?: RouteContext) => Promise<NextResponse>;
+
 /**
  * The single entry point for every route handler.
  *
@@ -57,23 +59,26 @@ type Handler<TInput, TOut> = (args: HandlerArgs<TInput>) => Promise<TOut>;
  *   3. turns AppError subclasses into the error envelope
  *   4. stamps `Server-Timing: app;dur=<ms>` so the PerfPill can show real numbers
  */
-export function withApi<TInput, TOut>(
-  schema: ZodType<TInput> | null,
-  handler: Handler<TInput, TOut>,
-) {
+export function withApi<S extends ZodTypeAny | null>(
+  schema: S,
+  // The handler sees the schema's *output* type, which matters:
+  // `page: z.coerce.number().default(1)` is optional going in and guaranteed
+  // coming out. Passing `null` gives the handler no input at all.
+  handler: Handler<S extends ZodTypeAny ? z.output<S> : undefined, unknown>,
+): RouteHandler {
   return async (req: NextRequest, ctx?: RouteContext) => {
     const started = performance.now();
 
     try {
       const params = ctx ? normalizeParams(await ctx.params) : {};
-      const input = schema ? schema.parse(await readInput(req)) : (undefined as TInput);
+      const input = schema ? schema.parse(await readInput(req)) : undefined;
       const result = await handler({ input, req, params });
 
       const ms = round(performance.now() - started);
       const unwrapped = result instanceof ApiResult ? result.data : result;
       const extraMeta = result instanceof ApiResult ? result.meta : undefined;
 
-      return json<TOut>({ ok: true, data: unwrapped as TOut, meta: { ...extraMeta, ms } }, 200, ms);
+      return json({ ok: true, data: unwrapped, meta: { ...extraMeta, ms } }, 200, ms);
     } catch (error) {
       const ms = round(performance.now() - started);
       return json(toErrorEnvelope(error), statusFor(error), ms);
