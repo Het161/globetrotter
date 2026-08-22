@@ -30,9 +30,16 @@
 import { readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
-// Dependencies and git objects: huge, and nothing there reads a directory
-// listing the way Next and Turbopack do.
-const SKIP = new Set(["node_modules", ".git"]);
+/**
+ * Only node_modules is skipped — it's huge and nothing in it enumerates a
+ * directory the way the tools below do.
+ *
+ * `.git` is deliberately *not* skipped. Git reads `.git/objects/pack` as a
+ * listing, so a `._pack-….idx` sidecar makes it complain
+ * ("non-monotonic index") on every gc. A `._` file can never be a real git
+ * object either — git names them in hex — so removing them is safe.
+ */
+const SKIP = new Set(["node_modules"]);
 
 let removed = 0;
 
