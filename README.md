@@ -132,7 +132,7 @@ src/
     (auth)/        login · signup · forgot · reset
     (app)/         everything behind the auth guard
     s/[slug]/      public share page + OG image
-    api/v1/        27 REST route handlers
+    api/v1/        36 REST route handlers
   components/
     ui/            the design system (DeckButton, Postcard, SplitFlap, RouteLine…)
     layout/        app shell — rail, top bar, breadcrumbs, ⌘K palette
