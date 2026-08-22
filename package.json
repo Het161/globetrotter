@@ -5,6 +5,7 @@
   "description": "GlobeTrotter — personalised multi-city trip planner. Odoo x LDCE Hackathon '26.",
   "scripts": {
     "preinstall": "node -e \"if(!(process.env.npm_config_user_agent||'').startsWith('pnpm')){console.error('\\n  This project uses pnpm. Run:  corepack enable && pnpm install\\n');process.exit(1)}\"",
+    "postinstall": "prisma generate",
     "dev": "node scripts/clean-appledouble.mjs && next dev",
     "build": "node scripts/clean-appledouble.mjs && prisma generate && next build",
     "start": "next start",

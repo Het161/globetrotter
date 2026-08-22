@@ -188,13 +188,17 @@ createdb globetrotter
 cp .env.example .env
 
 # 3. Install, migrate, seed
-pnpm install
-pnpm db:migrate      # creates the 11 tables + pg_trgm search indexes
+pnpm install         # postinstall runs `prisma generate` for you
+pnpm db:deploy       # creates the 11 tables + pg_trgm search indexes
 pnpm db:seed         # 48 cities, 288 activities, 2 users, 3 demo trips
 
 # 4. Go
 pnpm dev             # http://localhost:3000
 ```
+
+`db:deploy` applies the existing migrations, which is what you want on a fresh
+machine. `db:migrate` (`prisma migrate dev`) is for when you're changing the
+schema.
 
 ### Sign in
 
