@@ -15,6 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { CollaboratorsPanel } from "./collaborators-panel";
 import { routeCities } from "@/lib/trip-view";
 import { formatDateRange } from "@/lib/dates";
 
@@ -204,6 +205,9 @@ export function SharePanel({
             ) : null}
           </div>
         ) : null}
+
+        {/* Private sharing — nothing to do with the public link. */}
+        <CollaboratorsPanel tripId={trip.id} />
       </DialogContent>
     </Dialog>
   );

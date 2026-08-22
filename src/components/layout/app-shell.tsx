@@ -36,6 +36,14 @@ export function AppShell({
         <BreadcrumbProvider>
           <Backdrop variant="working" />
 
+          {/* First tab stop: jump past the rail and top bar. */}
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded-[var(--radius-input)] focus:border focus:border-lagoon focus:bg-harbor focus:px-4 focus:py-2.5 focus:text-sm focus:text-cloud"
+          >
+            Skip to content
+          </a>
+
           <Rail user={user} />
 
           <div className="md:pl-[72px]">

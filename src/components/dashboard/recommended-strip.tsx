@@ -45,12 +45,12 @@ export function RecommendedStrip({ cities }: { cities: CityDTO[] }) {
             <li key={city.id} className="w-[220px] shrink-0">
               <div className="surface lift-on-hover group overflow-hidden">
                 <Link href={`/explore/${city.slug}`} className="block">
-                  <Postcard city={city} size="card" tilt={false} />
+                  {/* The postcard names the city; the caption adds the price. */}
+                  <Postcard city={city} size="card" tilt={false} nameAs="h3" minimal />
                 </Link>
 
                 <div className="p-3.5">
-                  <p className="truncate text-sm font-semibold text-cloud">{city.name}</p>
-                  <p className="mt-0.5 truncate font-mono text-2xs text-fog">
+                  <p className="truncate font-mono text-2xs text-fog">
                     {city.country} · {money.format(city.avgStayCost, { decimals: false })}/night
                   </p>
 

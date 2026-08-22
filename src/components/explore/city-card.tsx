@@ -51,7 +51,9 @@ export function CityCard({
     <article className={cn("surface lift-on-hover group overflow-hidden", className)}>
       <Link href={`/explore/${city.slug}`} className="block focus-visible:outline-none">
         <div className="tear-line relative">
-          <Postcard city={city} size="card" tilt={false} />
+          {/* The postcard carries the name and country — the body below adds
+              what it doesn't say, rather than repeating it. */}
+          <Postcard city={city} size="card" tilt={false} nameAs="h3" />
 
           <button
             type="button"
@@ -71,16 +73,7 @@ export function CityCard({
         </div>
 
         <div className="p-4">
-          <div className="flex items-baseline justify-between gap-3">
-            <h3 className="truncate font-display text-lg font-medium text-cloud">
-              {city.name}
-            </h3>
-            <span className="shrink-0 font-mono text-2xs text-fog-dim">{city.countryCode}</span>
-          </div>
-
-          <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-fog">
-            {city.description}
-          </p>
+          <p className="line-clamp-2 text-xs leading-relaxed text-fog">{city.description}</p>
 
           <CostIndexBar value={city.costIndex} className="mt-3.5" />
 

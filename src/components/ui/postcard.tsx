@@ -57,6 +57,12 @@ export type PostcardProps = {
   tilt?: boolean;
   /** Hide the coordinates and stamp for the smallest chips. */
   minimal?: boolean;
+  /**
+   * The element the city name renders as. The postcard *is* the city's title
+   * wherever it appears, so a card that has no other heading should pass "h3"
+   * rather than printing the name a second time underneath.
+   */
+  nameAs?: "p" | "h2" | "h3";
   className?: string;
   children?: React.ReactNode;
 };
@@ -66,6 +72,7 @@ export function Postcard({
   size = "card",
   tilt = true,
   minimal = false,
+  nameAs: NameTag = "p",
   className,
   children,
 }: PostcardProps) {
@@ -177,7 +184,7 @@ export function Postcard({
 
         {/* City name, set in the display face. */}
         <div className="absolute inset-x-0 bottom-0 p-4 pl-4">
-          <p
+          <NameTag
             className={cn(
               "font-display font-medium leading-none tracking-[-0.02em] text-cloud drop-shadow-[0_2px_12px_rgba(0,0,0,0.6)]",
               minimal ? "" : "mb-5",
@@ -185,7 +192,7 @@ export function Postcard({
             )}
           >
             {city.name}
-          </p>
+          </NameTag>
           {!minimal && (
             <p className="placard absolute bottom-2.5 right-4 text-cloud/55">{city.country}</p>
           )}
