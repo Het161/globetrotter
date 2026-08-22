@@ -1,8 +1,9 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { Globe } from "@/components/globe";
 import { SplitFlap } from "@/components/ui/split-flap";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * The right-hand panel of the auth screens: a live globe running a real route
@@ -20,7 +21,7 @@ const DEMO_ROUTE = [
 ];
 
 export function AuthShowcase() {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
 
   return (
     <div className="relative hidden overflow-hidden border-l border-line lg:block">

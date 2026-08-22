@@ -3,9 +3,10 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
-import { motion, useMotionValue, useSpring, useReducedMotion } from "motion/react";
+import { motion, useMotionValue, useSpring } from "motion/react";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * DeckButton — the one button system in the app.
@@ -60,7 +61,7 @@ export const DeckButton = React.forwardRef<HTMLButtonElement, DeckButtonProps>(
     { className, variant, size, asChild, loading, magnetic, children, disabled, ...props },
     forwardedRef,
   ) {
-    const reduceMotion = useReducedMotion();
+    const reduceMotion = useSafeReducedMotion();
     const localRef = React.useRef<HTMLButtonElement>(null);
 
     const x = useMotionValue(0);

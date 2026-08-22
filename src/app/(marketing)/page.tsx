@@ -7,7 +7,8 @@ import { Backdrop } from "@/components/ui/backdrop";
 import { Logo } from "@/components/layout/logo";
 import { DeckButton } from "@/components/ui/deck-button";
 import { LandingHero } from "@/components/marketing/landing-hero";
-import { IntroCurtain, INTRO_SKIP_SCRIPT } from "@/components/marketing/intro-curtain";
+import { IntroCurtain } from "@/components/marketing/intro-curtain";
+import { IntroSkipInjector } from "@/components/marketing/intro-skip-injector";
 
 export const metadata: Metadata = {
   title: "GlobeTrotter — plan the route, know the cost",
@@ -54,7 +55,7 @@ export default async function LandingPage() {
     <div className="relative min-h-dvh">
       {/* Must run while the HTML is still parsing — before the curtain below is
           painted — so a repeat visit never sees it flash. */}
-      <script dangerouslySetInnerHTML={{ __html: INTRO_SKIP_SCRIPT }} />
+      <IntroSkipInjector />
 
       {/* The cities are the most-planned ones in the database, so even the
           opening animation is reading real data. */}

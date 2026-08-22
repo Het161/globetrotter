@@ -2,11 +2,12 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { Globe } from "@/components/globe";
 import { DeckButton } from "@/components/ui/deck-button";
 import { INTRO_EXIT_EVENT } from "./intro-curtain";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * The hero: an auto-rotating globe arcing between the most popular cities in
@@ -22,7 +23,7 @@ export function LandingHero({
   points: { name: string; lat: number; lng: number }[];
   signedIn: boolean;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
 
   /**
    * The hero arrives *as* the intro curtain pushes past the viewer, so the two

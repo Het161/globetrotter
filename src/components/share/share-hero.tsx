@@ -1,9 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { Eye } from "lucide-react";
 import { Globe } from "@/components/globe";
 import { formatDateRange } from "@/lib/dates";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * The dossier's cover: the route on a globe, the cities spelled out, and the
@@ -31,7 +32,7 @@ export function ShareHero({
   ownerName: string;
   viewCount: number;
 }) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
 
   const rise = (delay: number) => ({
     initial: reduceMotion ? false : { opacity: 0, y: 16 },

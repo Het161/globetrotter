@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * SplitFlap — mechanical departure-board digits.
@@ -44,7 +45,7 @@ export function SplitFlap({
   className,
   "aria-label": ariaLabel,
 }: SplitFlapProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
   const s = SIZES[size];
   const characters = React.useMemo(() => value.split(""), [value]);
 

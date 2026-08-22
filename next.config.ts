@@ -17,6 +17,7 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
  */
 const config = (phase: string): NextConfig => ({
   distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
+  allowedDevOrigins: ["192.168.137.1", "127.0.0.1", "localhost"],
 });
 
 export default config;

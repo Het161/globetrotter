@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from "motion/react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { cn } from "@/lib/utils";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * The layered night sky behind the app.
@@ -158,7 +159,7 @@ const PLANES = [
 ];
 
 function Starfield() {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
 
   // Pointer position, normalised to -0.5…0.5 around the viewport centre.
   const pointerX = useMotionValue(0);
@@ -228,12 +229,12 @@ function StarPlane({
           key={index}
           className="absolute rounded-full bg-cloud"
           style={{
-            left: `${star.x}%`,
-            top: `${star.y}%`,
-            width: star.size,
-            height: star.size,
-            opacity: star.opacity,
-            animation: reduceMotion ? undefined : `twinkle 4s ease-in-out ${star.delay}s infinite`,
+            left: `${star.x.toFixed(4)}%`,
+            top: `${star.y.toFixed(4)}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            opacity: Number(star.opacity.toFixed(4)),
+            animation: reduceMotion ? undefined : `twinkle 4s ease-in-out ${star.delay.toFixed(2)}s infinite`,
           }}
         />
       ))}

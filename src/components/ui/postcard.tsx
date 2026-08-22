@@ -2,8 +2,9 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { motion, useMotionValue, useSpring, useTransform, useReducedMotion } from "motion/react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
 import { cn, hashUnit } from "@/lib/utils";
+import { useSafeReducedMotion } from "@/hooks/use-safe-reduced-motion";
 
 /**
  * Postcard — what a city looks like when we have no photograph of it.
@@ -76,7 +77,7 @@ export function Postcard({
   className,
   children,
 }: PostcardProps) {
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useSafeReducedMotion();
   const ref = React.useRef<HTMLDivElement>(null);
   const s = SIZES[size];
 
