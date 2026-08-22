@@ -6,6 +6,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
 import { Globe } from "@/components/globe";
 import { DeckButton } from "@/components/ui/deck-button";
+import { INTRO_EXIT_EVENT } from "./intro-curtain";
 
 /**
  * The hero: an auto-rotating globe arcing between the most popular cities in
@@ -24,28 +25,40 @@ export function LandingHero({
   const reduceMotion = useReducedMotion();
 
   /**
-   * When the intro curtain is playing, the hero waits and then arrives *as*
-   * the curtain pushes past the viewer, so the two read as one continuous
-   * shot rather than two animations in sequence.
+   * The hero arrives *as* the intro curtain pushes past the viewer, so the two
+   * read as one continuous shot.
    *
-   * Read once on mount rather than passed down: the curtain's own decision
-   * lives in sessionStorage, and this only affects transition delays, never
-   * rendered markup — so there is nothing for hydration to mismatch on.
+   * It waits for the curtain's exit event rather than a fixed delay. A guessed
+   * delay breaks the moment the curtain is dismissed early — a scroll at 600 ms
+   * used to leave a second of completely blank page, because the curtain had
+   * gone but the hero was still counting down.
    */
-  const [introOffset] = React.useState(() => {
-    if (typeof document === "undefined") return 0;
-    const skipped = document.documentElement.dataset.gtIntro === "skip";
-    return skipped || reduceMotion ? 0 : 1.85;
+  const [ready, setReady] = React.useState(() => {
+    if (typeof document === "undefined") return false;
+    // No curtain to wait for: show immediately.
+    return document.documentElement.dataset.gtIntro === "skip";
   });
+
+  React.useEffect(() => {
+    if (ready) return;
+
+    const start = () => setReady(true);
+    window.addEventListener(INTRO_EXIT_EVENT, start, { once: true });
+
+    // Safety net: if the curtain never mounts or its script fails, the hero
+    // must still turn up rather than stay invisible forever.
+    const failsafe = window.setTimeout(start, 2200);
+
+    return () => {
+      window.removeEventListener(INTRO_EXIT_EVENT, start);
+      window.clearTimeout(failsafe);
+    };
+  }, [ready]);
 
   const rise = (delay: number) => ({
     initial: reduceMotion ? false : { opacity: 0, y: 18 },
-    animate: { opacity: 1, y: 0 },
-    transition: {
-      duration: 0.6,
-      delay: delay + introOffset,
-      ease: [0.22, 1, 0.36, 1] as const,
-    },
+    animate: ready || reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 18 },
+    transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
   });
 
   return (

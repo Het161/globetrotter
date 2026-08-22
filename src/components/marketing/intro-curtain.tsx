@@ -53,6 +53,16 @@ const NODE_AT = [0.32, 0.66, 0.98, 1.22];
 
 const TOTAL_MS = 2620;
 
+/** When the scene starts pushing past the viewer — matches --intro-out-at. */
+const EXIT_AT_MS = 2000;
+
+/**
+ * Fired the moment the curtain begins leaving, however it leaves. The hero
+ * waits for this rather than a hard-coded delay — otherwise dismissing the
+ * intro early leaves an empty page until the guess runs out.
+ */
+export const INTRO_EXIT_EVENT = "gt:intro-exit";
+
 export function IntroCurtain({ cities }: { cities: string[] }) {
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -74,20 +84,53 @@ export function IntroCurtain({ cities }: { cities: string[] }) {
       document.documentElement.dataset.gtIntro === "skip" ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+    let exited = false;
+    const signalExit = () => {
+      if (exited) return;
+      exited = true;
+      window.dispatchEvent(new Event(INTRO_EXIT_EVENT));
+    };
+
     if (skip) {
       node.remove();
+      signalExit();
       return;
     }
 
     sessionStorage.setItem("gt-intro-seen", "1");
 
+    /**
+     * Prefer the animation's own events over timers.
+     *
+     * The CSS starts at first paint while these timers start at hydration, so
+     * the two drift by however long hydration took. Listening to the exit
+     * animation itself keeps the hero's entrance and the curtain's departure
+     * locked together no matter how slow the page was to boot; the timers stay
+     * on as a fallback for when animation events don't fire at all.
+     */
+    const isExit = (event: AnimationEvent) =>
+      event.target === node && event.animationName === "gt-intro-out";
+
+    const onExitStart = (event: AnimationEvent) => isExit(event) && signalExit();
+    const onExitEnd = (event: AnimationEvent) => {
+      if (isExit(event)) node.remove();
+    };
+
+    node.addEventListener("animationstart", onExitStart);
+    node.addEventListener("animationend", onExitEnd);
+
+    const exitTimer = window.setTimeout(signalExit, EXIT_AT_MS);
     let removeTimer = window.setTimeout(() => node.remove(), TOTAL_MS);
 
-    // Any intent to interact cuts it short.
+    // Any intent to interact cuts it short — and the hero is told at once, so
+    // it is already arriving as the curtain goes.
     const dismiss = () => {
       if (node.dataset.dismissing === "true") return;
       node.dataset.dismissing = "true";
+
+      window.clearTimeout(exitTimer);
       window.clearTimeout(removeTimer);
+      signalExit();
       removeTimer = window.setTimeout(() => node.remove(), 380);
     };
 
@@ -97,7 +140,10 @@ export function IntroCurtain({ cities }: { cities: string[] }) {
     }
 
     return () => {
+      window.clearTimeout(exitTimer);
       window.clearTimeout(removeTimer);
+      node.removeEventListener("animationstart", onExitStart);
+      node.removeEventListener("animationend", onExitEnd);
       for (const type of events) window.removeEventListener(type, dismiss);
     };
   }, []);
