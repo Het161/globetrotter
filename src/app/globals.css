@@ -403,6 +403,150 @@
   }
 }
 
+/* --- Intro curtain -------------------------------------------------------
+   The landing page's 2.5 s opening. Beats are documented in
+   components/marketing/intro-curtain.tsx; these are the parts it animates. */
+
+@keyframes gt-intro-backdrop {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* The path declares pathLength="100", so this is a normalised draw — the
+   geometry can change without retiming anything. */
+@keyframes gt-route-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes gt-node-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.35);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The ring each node throws off as the line reaches it.
+   Frame 0 must be fully transparent: `animation-fill-mode: both` holds the
+   first keyframe throughout the delay, so starting at 0.55 would leave every
+   not-yet-reached node sitting on screen as a visible dot. */
+@keyframes gt-node-ring {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  12% {
+    opacity: 0.5;
+    transform: scale(0.75);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
+}
+
+/* The head of the route — a light running the path just ahead of the line
+   that draws behind it. `offset-distance` is what actually moves it. */
+@keyframes gt-comet {
+  0% {
+    offset-distance: 0%;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    offset-distance: 100%;
+    opacity: 0;
+  }
+}
+
+/* A soft bloom that swells as the route completes. */
+@keyframes gt-bloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* The mark lands just before the wordmark it belongs to. */
+@keyframes gt-mark-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.7) rotate(-25deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes gt-label-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Wordmark rising from behind its own mask. */
+@keyframes gt-word-rise {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* The handoff: the whole scene pushes past the viewer and dissolves into the
+   real hero underneath. */
+@keyframes gt-intro-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.09);
+  }
+}
+
+@keyframes gt-hairline {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 /* ==========================================================================
    Components
    ========================================================================== */
@@ -631,6 +775,137 @@
       transparent
     );
     animation: var(--animate-shimmer);
+  }
+
+  /* --- Intro curtain ----------------------------------------------------
+     The landing page's opening. The whole timeline lives in these custom
+     properties so the choreography can be retuned in one place.
+
+       0.00  backdrop fades up
+       0.30  the route draws itself, 0.95s
+       0.32→1.22  each city node pops as the line reaches it
+       0.55→1.28  city names fade in above their node
+       1.30  wordmark rises from behind its mask
+       2.00  the scene pushes past the viewer into the real hero
+       2.62  done — the node is removed from the DOM
+
+     It is `pointer-events: none` throughout, so it can never trap anyone;
+     the page behind it is live from the first frame. */
+  .gt-intro {
+    --intro-draw-at: 0.3s;
+    --intro-draw-dur: 0.95s;
+    --intro-word-at: 1.3s;
+    --intro-out-at: 2s;
+    --intro-out-dur: 0.62s;
+
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    background: var(--color-ink);
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: gt-intro-out var(--intro-out-dur) var(--ease-deck) var(--intro-out-at) both;
+  }
+
+  /* Dismissed early by a click, key or scroll — see intro-curtain.tsx. */
+  .gt-intro[data-dismissing="true"] {
+    animation: gt-intro-out 0.35s var(--ease-deck) 0s both;
+  }
+
+  .gt-intro__backdrop {
+    position: absolute;
+    inset: 0;
+    animation: gt-intro-backdrop 0.35s var(--ease-deck) both;
+  }
+
+  .gt-intro__route {
+    width: min(94vw, 1080px);
+    overflow: visible;
+  }
+
+  /* offset-path is set inline, from the same path string the line uses, so the
+     two can never drift apart. */
+  .gt-intro__comet {
+    offset-rotate: 0deg;
+    filter: drop-shadow(0 0 6px var(--color-lagoon));
+    animation: gt-comet var(--intro-draw-dur) cubic-bezier(0.4, 0, 0.2, 1)
+      var(--intro-draw-at) both;
+  }
+
+  .gt-intro__bloom {
+    animation: gt-bloom 0.9s var(--ease-deck) 0.9s both;
+  }
+
+  .gt-intro__path {
+    fill: none;
+    stroke: var(--color-lagoon);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    /* pathLength="100" on the element makes this a normalised draw. */
+    stroke-dasharray: 100;
+    animation: gt-route-draw var(--intro-draw-dur) cubic-bezier(0.4, 0, 0.2, 1)
+      var(--intro-draw-at) both;
+  }
+
+  .gt-intro__glow {
+    fill: none;
+    stroke: var(--color-lagoon);
+    stroke-width: 7;
+    stroke-linecap: round;
+    opacity: 0.16;
+    filter: blur(5px);
+    stroke-dasharray: 100;
+    animation: gt-route-draw var(--intro-draw-dur) cubic-bezier(0.4, 0, 0.2, 1)
+      var(--intro-draw-at) both;
+  }
+
+  .gt-intro__node {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: gt-node-pop 0.5s var(--ease-deck) both;
+  }
+
+  .gt-intro__ring {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: gt-node-ring 1.1s var(--ease-deck) both;
+  }
+
+  .gt-intro__label {
+    animation: gt-label-in 0.4s var(--ease-deck) both;
+  }
+
+  .gt-intro__mark {
+    animation: gt-mark-in 0.55s var(--ease-deck) 1.15s both;
+  }
+
+  /* The mask the wordmark rises out of. */
+  .gt-intro__word {
+    overflow: hidden;
+    display: block;
+  }
+  .gt-intro__word > span {
+    display: block;
+    animation: gt-word-rise 0.6s var(--ease-deck) var(--intro-word-at) both;
+  }
+
+  .gt-intro__hairline {
+    transform-origin: center;
+    animation: gt-hairline 0.5s var(--ease-deck) 1.45s both;
+  }
+}
+
+/* Repeat visit in this session, or reduced motion — the inline script in the
+   landing page sets this before first paint, so the curtain never flashes. */
+html[data-gt-intro="skip"] .gt-intro {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gt-intro {
+    display: none;
   }
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { motion, useReducedMotion } from "motion/react";
 import { ArrowUpRight } from "lucide-react";
@@ -22,10 +23,29 @@ export function LandingHero({
 }) {
   const reduceMotion = useReducedMotion();
 
+  /**
+   * When the intro curtain is playing, the hero waits and then arrives *as*
+   * the curtain pushes past the viewer, so the two read as one continuous
+   * shot rather than two animations in sequence.
+   *
+   * Read once on mount rather than passed down: the curtain's own decision
+   * lives in sessionStorage, and this only affects transition delays, never
+   * rendered markup — so there is nothing for hydration to mismatch on.
+   */
+  const [introOffset] = React.useState(() => {
+    if (typeof document === "undefined") return 0;
+    const skipped = document.documentElement.dataset.gtIntro === "skip";
+    return skipped || reduceMotion ? 0 : 1.85;
+  });
+
   const rise = (delay: number) => ({
     initial: reduceMotion ? false : { opacity: 0, y: 18 },
     animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
+    transition: {
+      duration: 0.6,
+      delay: delay + introOffset,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
   });
 
   return (

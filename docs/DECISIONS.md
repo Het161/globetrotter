@@ -141,6 +141,27 @@ Two follow-ons from that investigation:
 
 None of this costs anything on APFS or ext4.
 
+**The landing intro is the route, not a spinner.** Research into current
+practice kept landing on the same point: the differentiator is restraint — an
+opening should amplify the product, not perform over it. So the curtain draws
+the app's existing signature (a Lagoon flight path through cities) using real
+cities from the database, rather than inventing a separate brand moment.
+
+Three findings shaped how it's built:
+
+- *Keep it non-blocking.* Guidance is to hold a blocking preloader under 1.5 s.
+  This runs 2.6 s but never blocks: it's `pointer-events: none`, the page is
+  live behind it from the first frame, and any interaction cuts it short.
+- *Skip repeat visits*, or crawlers and returning users pay for it every time.
+  sessionStorage, checked by an inline script before first paint.
+- *`prefers-reduced-motion` skips it outright* rather than shortening it.
+
+Motion is CSS, not JavaScript, so it begins on the first painted frame instead
+of waiting for hydration. The path uses `pathLength="100"`, which makes the
+draw normalised — the geometry can be retuned without retiming anything — and
+the comet at the head of the line rides the *same* path string via
+`offset-path`, so the two can't drift apart.
+
 **A `preinstall` guard rejects npm.** `node_modules` is pnpm-linked;
 `npm install` would rebuild it incorrectly. The guard checks
 `npm_config_user_agent` and exits with a one-line instruction. `npm run <script>`

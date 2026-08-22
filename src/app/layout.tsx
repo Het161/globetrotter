@@ -24,7 +24,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // `scroll-behavior: smooth` is set on <html> in globals.css. Next needs
     // this attribute to know that's deliberate, otherwise it warns and route
     // transitions animate their scroll instead of jumping.
-    <html lang="en" className={fontClassNames} data-scroll-behavior="smooth">
+    // suppressHydrationWarning because the landing page's inline script sets
+    // data-gt-intro on <html> before React hydrates — that's the documented
+    // way to skip the intro without a flash.
+    <html
+      lang="en"
+      className={fontClassNames}
+      data-scroll-behavior="smooth"
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh bg-ink text-cloud antialiased">
         {children}
         <Toaster

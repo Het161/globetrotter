@@ -175,6 +175,28 @@ Secondary motif: `SplitFlap` departure-board digits, allowed in exactly two
 places (the budget headline and the dashboard budget tile). Repeating it
 anywhere else would turn a signature into a gimmick.
 
+### The intro curtain
+
+`components/marketing/intro-curtain.tsx` opens the landing page by drawing that
+same route — a flight path arcing between four cities pulled from the database,
+a comet running ahead of the line, each node landing as it's reached, then the
+wordmark rising from behind a mask. The design system introducing itself, rather
+than a loading screen bolted on the front.
+
+It is built to be impossible to get stuck behind:
+
+- markup is server-rendered and the motion is pure CSS, so it starts on the
+  first painted frame and never waits for hydration
+- `pointer-events: none` throughout, and any click, key or scroll cuts it short
+- once per session, skipped under `prefers-reduced-motion`, and skipped *before
+  first paint* by an inline script so a repeat visit never sees a flash
+- if JavaScript never runs, the CSS still animates it away
+
+The decision to skip lives in the inline script; the effect only handles
+cleanup. That split matters — an effect that both wrote and read
+`gt-intro-seen` would see its own write on StrictMode's second pass and bin the
+curtain before it played.
+
 ### Depth is built, not faked
 
 `DeckButton` is two stacked slabs: a plate pinned 3 px below the face, and the
@@ -194,6 +216,7 @@ aurora, three star planes, film grain, a survey graticule.
 
 | Surface | Backdrop | Motion |
 |---|---|---|
+| Landing (first visit) | intro curtain, 2.6 s | the route draws itself between four real cities, then hands off to the hero |
 | Landing, auth, public share | full aurora + starfield + globe | rich: route draw-in, staggered reveals, parallax |
 | Dashboard | static, globe tile animates | medium: tile stagger, split-flap, hover lift |
 | Builder, budget, calendar, explore, admin | texture only, static | light: 150–250 ms transitions only |
