@@ -38,7 +38,7 @@ export function withMeta<T>(data: T, meta: Omit<ApiMeta, "ms">) {
 /* withApi                                                                    */
 /* -------------------------------------------------------------------------- */
 
-type RouteContext = { params: Promise<Record<string, string | string[]>> };
+type RouteContext = { params?: Promise<Record<string, string | string[]>> };
 
 type HandlerArgs<TInput> = {
   input: TInput;
@@ -70,7 +70,8 @@ export function withApi<S extends ZodTypeAny | null>(
     const started = performance.now();
 
     try {
-      const params = ctx ? normalizeParams(await ctx.params) : {};
+      // Static routes still receive a context object, but without `params`.
+      const params = ctx?.params ? normalizeParams(await ctx.params) : {};
       const input = schema ? schema.parse(await readInput(req)) : undefined;
       const result = await handler({ input, req, params });
 

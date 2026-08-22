@@ -1,13 +1,15 @@
 import "server-only";
 import type { Prisma } from "@prisma/client";
 import { db } from "@/server/db";
-import { toTripDTO, type TripDTO, type TripSummary } from "@/server/dto";
+import { toTripDTO, type TripDTO } from "@/server/dto";
 import { ConflictError, ForbiddenError, NotFoundError, ValidationError } from "@/server/http/errors";
 import { paged, skipTake, type Paged } from "@/server/http/pagination";
-import { computeBudget, type BudgetBreakdown, type BudgetInput } from "@/server/engine/budget";
+import { computeBudget, type BudgetBreakdown } from "@/server/engine/budget";
 import { findStopConflicts, shiftStops, validateTripWindow } from "@/server/engine/stop-dates";
 import { daysBetween, fromISODate, type ISODate } from "@/lib/dates";
 import type { CreateTripInput, TripListQuery, UpdateTripInput } from "@/lib/validators/trips";
+// Both live in lib/ so the itinerary builder can run the same engine client-side.
+import { budgetInputFor, summarizeTrip as summarize } from "@/lib/trip-view";
 import { logEvent } from "./analytics";
 import type { UserDTO } from "@/server/dto";
 
@@ -27,6 +29,8 @@ const FULL_TRIP = {
   expenses: { orderBy: { date: "asc" } },
   user: true,
 } satisfies Prisma.TripInclude;
+
+export { budgetInputFor, summarizeTrip as summarize } from "@/lib/trip-view";
 
 export type AccessLevel = "VIEW" | "EDIT" | "OWNER";
 
@@ -249,48 +253,6 @@ export async function getTripBudget(
   return { ...computeBudget(budgetInputFor(trip)), trip };
 }
 
-/** Map a trip DTO onto the engine's input shape. */
-export function budgetInputFor(trip: TripDTO): BudgetInput {
-  return {
-    startDate: trip.startDate,
-    endDate: trip.endDate,
-    budgetLimit: trip.budgetLimit,
-    stops: trip.stops.map((stop) => ({
-      id: stop.id,
-      cityName: stop.city.name,
-      arrivalDate: stop.arrivalDate,
-      departureDate: stop.departureDate,
-      stayCostPerNight: stop.stayCostPerNight,
-      transportCostToNext: stop.transportCostToNext,
-      avgMealCost: stop.city.avgMealCost,
-      activities: stop.activities.map((a) => ({
-        id: a.id,
-        name: a.name,
-        date: a.date,
-        cost: a.cost,
-      })),
-    })),
-    expenses: trip.expenses.map((e) => ({
-      id: e.id,
-      category: e.category,
-      label: e.label,
-      amount: e.amount,
-      date: e.date,
-    })),
-  };
-}
-
-/** The few numbers a TripCard shows, computed from the same engine. */
-export function summarize(trip: TripDTO): TripSummary {
-  const budget = computeBudget(budgetInputFor(trip));
-  return {
-    stopCount: trip.stops.length,
-    nights: trip.stops.reduce((sum, s) => sum + s.nights, 0),
-    activityCount: trip.stops.reduce((sum, s) => sum + s.activities.length, 0),
-    total: budget.total,
-    cities: trip.stops.map((s) => s.city.name),
-  };
-}
 
 /* -------------------------------------------------------------------------- */
 /* Calendar                                                                   */

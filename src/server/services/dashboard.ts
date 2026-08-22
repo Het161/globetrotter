@@ -3,7 +3,7 @@ import { db } from "@/server/db";
 import { toCityDTO, toTripDTO, type CityDTO, type TripDTO } from "@/server/dto";
 import { computeBudget } from "@/server/engine/budget";
 import { budgetInputFor, summarize } from "./trips";
-import { todayISO, type ISODate } from "@/lib/dates";
+import { todayISO } from "@/lib/dates";
 
 export type DashboardData = {
   upcoming: TripDTO[];
@@ -110,21 +110,4 @@ export async function getDashboard(userId: string): Promise<DashboardData> {
       lng: city.lng,
     })),
   };
-}
-
-/** Countdown source for the departure board. */
-export function departureRows(trips: TripDTO[], from: ISODate = todayISO()) {
-  return trips.map((trip) => ({
-    id: trip.id,
-    name: trip.name,
-    firstCity: trip.stops[0]?.city.name ?? "No stops yet",
-    startDate: trip.startDate,
-    status: trip.status,
-    daysAway: Math.round(
-      (new Date(`${trip.startDate}T00:00:00Z`).getTime() -
-        new Date(`${from}T00:00:00Z`).getTime()) /
-        86_400_000,
-    ),
-    total: trip.summary?.total ?? 0,
-  }));
 }

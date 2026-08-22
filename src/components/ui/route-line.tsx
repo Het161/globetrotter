@@ -165,6 +165,14 @@ export type RouteSpineProps = {
   pending?: boolean;
   /** Ember when the stop contains an over-budget day. */
   alert?: boolean;
+  /**
+   * Distance from the top of the row to the node, in px.
+   *
+   * Rows in the stop rail grow when they're expanded for editing, and a
+   * vertically centred node would then slide far below the city it marks. An
+   * explicit offset pins it to the row's header instead.
+   */
+  nodeOffset?: number;
   className?: string;
 };
 
@@ -174,6 +182,7 @@ export function RouteSpine({
   active,
   pending,
   alert,
+  nodeOffset,
   className,
 }: RouteSpineProps) {
   const colour = alert ? "var(--color-ember)" : "var(--color-lagoon)";
@@ -185,8 +194,9 @@ export function RouteSpine({
     >
       {/* Segment reaching up to the previous stop. */}
       <span
-        className="w-px flex-1"
+        className={nodeOffset === undefined ? "w-px flex-1" : "w-px"}
         style={{
+          height: nodeOffset === undefined ? undefined : nodeOffset,
           background: first ? "transparent" : colour,
           opacity: first ? 0 : 0.32,
         }}

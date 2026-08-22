@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { formatMoney, formatMoneyDigits, symbolFor, toUSD } from "@/lib/currency";
+import { formatMoney, formatMoneyDigits, fromUSD, symbolFor, toUSD } from "@/lib/currency";
 
 /**
  * The user's display currency, threaded down from the session so every screen
@@ -33,6 +33,12 @@ export function useCurrency() {
       digits: (amountUSD: number) => formatMoneyDigits(amountUSD, currency),
       /** Convert what the user typed back into the USD we store. */
       toUSD: (amount: number) => toUSD(amount, currency),
+      /**
+       * A bare number in the display currency — what a numeric <input> needs
+       * as its value. `format` returns a decorated string and can't be used
+       * for that.
+       */
+      toDisplay: (amountUSD: number) => Math.round(fromUSD(amountUSD, currency) * 100) / 100,
     }),
     [currency],
   );

@@ -22,7 +22,8 @@ export function Field({
   htmlFor,
 }: {
   label?: string;
-  hint?: string;
+  /** Right-aligned helper — plain text, or a link like "Forgot?". */
+  hint?: React.ReactNode;
   error?: string;
   required?: boolean;
   className?: string;

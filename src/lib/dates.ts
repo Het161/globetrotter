@@ -126,6 +126,14 @@ export function countdown(target: ISODate, from: ISODate = todayISO()): string {
   return `${Math.abs(d)} days ago`;
 }
 
+/** "Morning" / "Afternoon" / "Evening" for the dashboard greeting. */
+export function greeting(now: Date = new Date()): string {
+  const hour = now.getHours();
+  if (hour < 12) return "Morning";
+  if (hour < 17) return "Afternoon";
+  return "Evening";
+}
+
 /** 570 -> "09:30". Minutes from midnight is how we store activity start times. */
 export function formatMinute(min: number | null | undefined): string {
   if (min === null || min === undefined) return "—";

@@ -15,10 +15,10 @@ export function LogoMark({ className, size = 28 }: { className?: string; size?: 
       className={cn("shrink-0", className)}
       aria-hidden
     >
-      <circle cx="16" cy="16" r="13" stroke="var(--color-cloud)" strokeOpacity="0.22" strokeWidth="1.4" />
+      <circle cx="16" cy="16" r="13" stroke="var(--color-cloud)" strokeOpacity="0.42" strokeWidth="1.4" />
       {/* Meridians — just enough to read as a globe at 20 px. */}
-      <ellipse cx="16" cy="16" rx="6" ry="13" stroke="var(--color-cloud)" strokeOpacity="0.14" strokeWidth="1.1" />
-      <path d="M3.4 16h25.2" stroke="var(--color-cloud)" strokeOpacity="0.14" strokeWidth="1.1" />
+      <ellipse cx="16" cy="16" rx="6" ry="13" stroke="var(--color-cloud)" strokeOpacity="0.26" strokeWidth="1.1" />
+      <path d="M3.4 16h25.2" stroke="var(--color-cloud)" strokeOpacity="0.26" strokeWidth="1.1" />
 
       {/* The route. */}
       <path
