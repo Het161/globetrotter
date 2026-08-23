@@ -17,20 +17,48 @@ export const metadata: Metadata = {
 };
 
 /**
+ * The six cities drawn when the database can't be reached — the same six the
+ * query below returns, so the page looks identical either way.
+ *
+ * This is the only hardcoded city data in the app, and it exists because of
+ * what this page is: the one screen a stranger sees before they have an
+ * account. It has to render.
+ */
+const FALLBACK_CITIES = [
+  { name: "Paris", lat: 48.8566, lng: 2.3522 },
+  { name: "Tokyo", lat: 35.6762, lng: 139.6503 },
+  { name: "New York", lat: 40.7128, lng: -74.006 },
+  { name: "Rome", lat: 41.9028, lng: 12.4964 },
+  { name: "Kyoto", lat: 35.0116, lng: 135.7681 },
+  { name: "Barcelona", lat: 41.3874, lng: 2.1686 },
+];
+
+/**
  * The landing page. Short by design — the product sells itself once you're
  * inside, so this exists to get you there.
  *
  * The globe arcs between the six most popular cities in the database, not a
- * hardcoded list, so even the marketing page is reading real data.
+ * hardcoded list, so even the marketing page is reading real data — but it
+ * degrades rather than failing. Those arcs are decoration; taking the whole
+ * page down over them means a database blip, a cold start on a serverless
+ * Postgres, or a mistyped connection string turns the front door into an
+ * error screen. `getSession()` already returns null when it can't reach the
+ * database, so this is the last thing here that could throw.
  */
 export default async function LandingPage() {
   const [user, popular] = await Promise.all([
     getSession(),
-    db.city.findMany({
-      orderBy: { popularity: "desc" },
-      take: 6,
-      select: { name: true, lat: true, lng: true },
-    }),
+    db.city
+      .findMany({
+        orderBy: { popularity: "desc" },
+        take: 6,
+        select: { name: true, lat: true, lng: true },
+      })
+      .then((cities) => (cities.length > 0 ? cities : FALLBACK_CITIES))
+      .catch((error) => {
+        console.error("[landing] city query failed, drawing the fallback route:", error);
+        return FALLBACK_CITIES;
+      }),
   ]);
 
   const features = [
