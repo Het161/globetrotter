@@ -1,4 +1,5 @@
 import "server-only";
+import { after } from "next/server";
 import { db } from "@/server/db";
 import { mailer } from "./transport";
 import { welcomeEmail, signupNoticeEmail } from "./templates";
@@ -42,13 +43,18 @@ async function deliver(to: string, message: Message): Promise<void> {
 }
 
 /**
- * Fires both signup messages without awaiting either.
+ * Fires both signup messages without making the caller wait for either.
  *
- * Deliberately not exported as a promise: callers should not be able to await
- * this by accident and put a 2-second SMTP round trip inside a signup response.
- * On a long-lived server the sends finish in the background. On a
- * serverless platform this is the spot that would need an
- * `after()` / queue instead — noted rather than pretended otherwise.
+ * The work is handed to Next's `after()`, which is the difference between this
+ * working locally and working in production. A bare detached promise survives
+ * on a long-lived Node server, but on a serverless platform the function is
+ * frozen the moment the response is flushed — the SMTP dialogue would be cut
+ * off mid-sentence and the email would silently never arrive. `after()` keeps
+ * the invocation alive until the callback settles, while still letting the
+ * response go out first.
+ *
+ * Outside a request there is no `after()` to call — a CLI script, a test — so
+ * that case falls back to detaching, where nothing is going to freeze anyway.
  */
 export function sendSignupEmails(user: {
   id: string;
@@ -58,7 +64,7 @@ export function sendSignupEmails(user: {
 }): void {
   if (!mailer()) return;
 
-  void (async () => {
+  const work = async () => {
     const base = appUrl();
 
     // Sequential, not Promise.all: the pool holds two connections and Gmail is
@@ -90,7 +96,15 @@ export function sendSignupEmails(user: {
     } catch (error) {
       console.error(`[mail] signup notice to ${owner} failed:`, describe(error));
     }
-  })();
+  };
+
+  try {
+    after(work);
+  } catch {
+    // No request context — a script or a test. Nothing is about to freeze the
+    // process here, so detaching is safe and keeps the caller non-blocking.
+    void work();
+  }
 }
 
 function describe(error: unknown): string {

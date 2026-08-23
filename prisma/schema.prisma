@@ -8,6 +8,16 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
+  // Migrations open a session and hold advisory locks, which a transaction-mode
+  // pooler (PgBouncer, Neon's pooled endpoint) will not carry. DATABASE_URL is
+  // therefore the pooled endpoint the app queries through, and DIRECT_URL is the
+  // unpooled one `prisma migrate` uses.
+  //
+  // DIRECT_URL is required, not optional — Prisma fails validation if it is
+  // missing rather than falling back. Against a plain local Postgres there is
+  // no pooler, so set both to the same string.
+  directUrl = env("DIRECT_URL")
 }
 
 enum Role {

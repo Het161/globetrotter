@@ -21,24 +21,27 @@ const config = (phase: string): NextConfig => ({
 
   images: {
     /**
-     * The optimiser is off, and the city photos are pre-sized instead
-     * (1000x563 WebP, ~86 KB each, built by scripts/build-city-images).
+     * The optimiser is disabled **in development only**, and the city photos
+     * are pre-sized to compensate (1000x563 WebP, ~86 KB each, built by
+     * scripts/build-city-images).
      *
-     * Not a preference — the optimiser is not safe on this exFAT volume. It
-     * caches derivatives under `<distDir>/dev/cache/images/<hash>/`, macOS
-     * drops an AppleDouble `._<name>` sidecar beside each one, and Next reads
-     * the directory and picks the sidecar: every city image then returns
-     * HTTP 200 with 4096 bytes of AppleDouble and `application/octet-stream`,
-     * which no browser will decode. Same root cause as the Turbopack cache
-     * problem in scripts/clean-appledouble.mjs, but this one recurs *during* a
-     * session, so cleaning before the run doesn't help.
+     * Not a preference — the optimiser is not safe on the exFAT volume this
+     * was written on. It caches derivatives under
+     * `<distDir>/dev/cache/images/<hash>/`, macOS drops an AppleDouble
+     * `._<name>` sidecar beside each one, and Next reads the directory and
+     * picks the sidecar: every city image then returns HTTP 200 with 4096
+     * bytes of AppleDouble and `application/octet-stream`, which no browser
+     * will decode. Same root cause as the Turbopack cache problem in
+     * scripts/clean-appledouble.mjs, but this one recurs *during* a session,
+     * so cleaning before the run doesn't help. The failure is silent and
+     * total — all 48 cards break at once.
      *
-     * The failure is silent and total — all 48 cards break at once — so it is
-     * not something to leave armed during a demo. Serving the files straight
-     * from public/ costs the difference between an 86 KB source and a ~30 KB
-     * derivative, on images that lazy-load anyway.
+     * None of that applies on Vercel: Linux, no AppleDouble, and the optimiser
+     * is exactly where it should run. Carrying a local filesystem workaround
+     * into production would mean shipping 86 KB where 30 KB would do, on every
+     * card, for no reason.
      */
-    unoptimized: true,
+    unoptimized: phase === PHASE_DEVELOPMENT_SERVER,
   },
 });
 
