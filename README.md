@@ -11,6 +11,10 @@ changes while your finger is still down.
 Next.js&nbsp;16 · React&nbsp;19 · TypeScript&nbsp;strict · PostgreSQL&nbsp;15 · Prisma&nbsp;6 · Tailwind&nbsp;v4
 </sub>
 
+### [**▲ Live — globetrotter-wine-ten.vercel.app**](https://globetrotter-wine-ten.vercel.app)
+
+<sub>Sign in with `demo@globetrotter.app` / `Demo@1234` — there's a one-click button on the login screen.</sub>
+
 <sub>Built for the **Odoo × LDCE Ahmedabad Hackathon '26**</sub>
 
 </div>
@@ -229,7 +233,13 @@ The login screen has a one-click button for each, so you don't have to type them
 
 `pnpm bench` with the app running and the database seeded. These are the
 server's own numbers, read from the `Server-Timing` header — not round-trip
-time. Run on an M-series Mac against local Postgres:
+time. Run on an M-series Mac against local Postgres.
+
+In production the same trigram search settles at **~11 ms** rather than 2.6 ms:
+the query is as fast, but the Vercel function and Neon are separate machines,
+so each round trip crosses a network the local numbers never touch. The first
+request after an idle period is slower again (~280 ms) while Neon's compute
+wakes.
 
 | Endpoint | p50 | p95 | Budget |
 |---|---|---|---|
