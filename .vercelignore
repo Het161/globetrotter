@@ -1,0 +1,24 @@
+# What NOT to upload to Vercel.
+#
+# This file *replaces* .gitignore for deploys rather than adding to it, so
+# everything the build needs must survive the list below — src, prisma, public,
+# package.json, the lockfile and the configs all do.
+#
+# Without it the CLI tried to upload 888 MB and was rejected: Turbopack's local
+# caches hold single .sst files of 200 MB+, and the hard limit is 100 MB per
+# file. None of it is wanted anyway — Vercel installs dependencies and builds
+# from source on its own machines.
+
+node_modules
+.next
+.next-dev
+.git
+
+# Local-only: the seeded uploads directory, macOS sidecars, editor noise.
+public/uploads/*
+!public/uploads/.gitkeep
+._*
+.DS_Store
+
+# Not part of the running app.
+GlobeTrotter.pdf
