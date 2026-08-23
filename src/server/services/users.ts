@@ -6,6 +6,7 @@ import { hashPassword, verifyPassword } from "@/server/auth/password";
 import { createResetToken, hashToken, resetTokenExpiry } from "@/server/auth/tokens";
 import type { LoginInput, SignupInput } from "@/lib/validators/auth";
 import type { ChangePasswordInput, UpdateProfileInput } from "@/lib/validators/profile";
+import { sendSignupEmails } from "@/server/email";
 import { logEvent } from "./analytics";
 
 export async function signup(input: SignupInput): Promise<UserDTO> {
@@ -25,6 +26,17 @@ export async function signup(input: SignupInput): Promise<UserDTO> {
   });
 
   logEvent("signup", { userId: user.id });
+
+  // Welcome to them, notification to the owner. Neither is awaited: the account
+  // exists at this point, so nothing about SMTP should be able to change what
+  // the caller gets back.
+  sendSignupEmails({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    createdAt: user.createdAt,
+  });
+
   return toUserDTO(user);
 }
 

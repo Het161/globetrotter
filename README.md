@@ -269,6 +269,29 @@ into it. Surfaces sit on a backdrop that moves slowly enough that you notice it
 only if you look. Every animation is behind `prefers-reduced-motion`, and the
 whole palette is defined once as `@theme` tokens in `src/app/globals.css`.
 
+### Email
+
+Signing up sends two messages: a **welcome** to the new account, and a **new
+signup notification** to `OWNER_EMAIL` carrying the name, address, user id,
+timestamp and the live user count.
+
+Both are hand-built table layouts in the NIGHT ATLAS palette with a plain-text
+alternative, because email is not the web — no flexbox, no grid, no webfonts,
+and Outlook renders through Word. `pnpm preview:emails` writes them to disk to
+look at; `pnpm send:test-email` posts them for real.
+
+Two properties worth knowing:
+
+- **An email can never fail a signup.** Both sends are detached, exactly like
+  `logEvent`. With the SMTP password deliberately wrong, signup still returns
+  `200`, the account is still created, and the failure is one line on the log.
+- **With no SMTP credentials the whole thing turns itself off** and says so.
+  Cloning this repo and signing up works without anyone's mailbox.
+
+Templates are pure functions, so they're unit-tested like the engines — 14
+tests, including that a display name of `<img src=x onerror="...">` comes out
+as inert escaped text.
+
 ### It works offline
 
 No runtime network dependency: fonts are committed to `public/fonts`, globe
@@ -338,6 +361,9 @@ src/
 | `pnpm db:studio` | Prisma Studio |
 | `pnpm bench` | Measure the API against the performance budget |
 | `pnpm check:images` | HEAD-check every image URL in the database |
+| `pnpm preview:emails` | Render both signup emails to disk. Sends nothing. |
+| `pnpm send:test-email` | Actually post both, to `OWNER_EMAIL` or an address you pass |
+| `pnpm build:city-images` | Rebuild `public/cities/` from Wikimedia Commons |
 
 ---
 
